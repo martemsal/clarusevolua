@@ -83,18 +83,24 @@ if (localStorage.getItem('clarusAppVersion') !== APP_VERSION) {
     console.log("🚀 [System] Recuperação de arquivos concluída. Versão v" + APP_VERSION + " aplicada.");
 }
 
-const saveAdminData = () => {
+const saveAdminData = async () => {
     localStorage.setItem('clarusCompanies', JSON.stringify(mockCompanies));
     
     // SUPABASE SYNC UP
     if (window.db && window.db.saveCompany) {
         if (editingCompanyId) {
             const comp = mockCompanies.find(c => c.id === editingCompanyId);
-            if (comp) window.db.saveCompany(comp).catch(e => console.error("Sync Error:", e));
+            if (comp) {
+                const result = await window.db.saveCompany(comp);
+                if (!result.success) {
+                    alert("⚠️ Erro de Sincronização Cloud: " + result.error + "\n\nO cliente foi salvo localmente, mas não no Supabase. Verifique se as colunas da tabela coincidem com o código.");
+                }
+            }
         } else {
-            mockCompanies.forEach(comp => {
-                window.db.saveCompany(comp).catch(e => console.error("Sync Error:", e));
-            });
+            // Sincronização em massa (opcional)
+            for (const comp of mockCompanies) {
+                await window.db.saveCompany(comp);
+            }
         }
     }
 };
@@ -856,7 +862,7 @@ if (form) {
         });
     }
 
-    form.addEventListener('submit', (e) => {
+    form.addEventListener('submit', async (e) => {
         e.preventDefault();
         const mode = document.getElementById('admin-comp-mode').value;
         const name = document.getElementById('admin-comp-name').value;
@@ -875,7 +881,7 @@ if (form) {
                 id, name, password, level, modules, banks: [], files: [], capitalSocial: parseFloat(document.getElementById('admin-comp-capital').value) || 0
             });
             editingCompanyId = id;
-            saveAdminData();
+            await saveAdminData();
             alert(`Cliente "${name}" cadastrado com sucesso!\nID liberado: ${id}`);
             editingCompanyId = null;
         } else {
@@ -885,7 +891,7 @@ if (form) {
             comp.level = level;
             comp.modules = modules;
             comp.capitalSocial = parseFloat(document.getElementById('admin-comp-capital').value) || 0;
-            saveAdminData();
+            await saveAdminData();
             alert(`Definições do cliente "${name}" atualizadas com sucesso!`);
         }
 

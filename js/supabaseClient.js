@@ -30,6 +30,7 @@ window.db = {
     },
 
     async saveCompany(comp) {
+        console.log("📤 [Supabase] Tentando salvar empresa:", comp.id);
         const { data, error } = await supabase
             .from('companies')
             .upsert({
@@ -43,8 +44,12 @@ window.db = {
                 files: comp.files || []
             }, { onConflict: 'id' });
             
-        if (error) console.error("Erro ao salvar empresa:", error);
-        return !error;
+        if (error) {
+            console.error("❌ [Supabase] Erro ao salvar empresa:", error);
+            return { success: false, error: error.message };
+        }
+        console.log("✅ [Supabase] Empresa salva com sucesso:", comp.id);
+        return { success: true };
     },
 
     // --- DADOS FINANCEIROS (DRE e FLUXO) ---

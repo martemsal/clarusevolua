@@ -226,9 +226,27 @@ body {
 /* GRID DE INDICADORES - COMPACTO E MULTI-COLUNA */
 .grid-indicators-expert {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 1.5rem;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1.25rem;
     margin-bottom: 2rem;
+}
+
+@media (max-width: 1200px) {
+    .grid-indicators-expert {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (max-width: 900px) {
+    .grid-indicators-expert {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 600px) {
+    .grid-indicators-expert {
+        grid-template-columns: 1fr;
+    }
 }
 
 /* Ajuste nos cards para serem mais compactos */
@@ -648,7 +666,7 @@ body.light-theme .topbar .page-title h2 {
 
 /* Topbar */
 .topbar {
-    height: 5rem; /* 80px */
+    height: 4.5rem; /* Reduzido de 5rem */
     background: #1e293b;
     border-bottom: 1px solid var(--border-color);
     display: flex;
@@ -660,7 +678,7 @@ body.light-theme .topbar .page-title h2 {
 }
 
 .topbar-left h2 {
-    font-size: 1.5rem;
+    font-size: 1.35rem;
     font-weight: 700;
     color: white;
 }
@@ -1432,7 +1450,7 @@ body.light-theme .page-title p {
     flex-direction: column;
     justify-content: space-between;
     transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s ease;
-    min-height: 13.75rem; /* 220px */
+    min-height: 11.5rem;
     border-top: 2px solid transparent;
 }
 
@@ -1479,20 +1497,20 @@ body.light-theme .page-title p {
 }
 
 .indicator-value {
-    font-size: 2.4rem;
+    font-size: 2.1rem;
     font-weight: 800;
     color: var(--text-primary);
-    margin: 1.25rem 0 0.5rem 0;
+    margin: 0.75rem 0 0.5rem 0;
     letter-spacing: -1px;
 }
 
 .indicator-status {
-    font-size: 0.8rem;
+    font-size: 0.75rem;
     font-weight: 700;
-    padding: 4px 10px;
+    padding: 3px 8px;
     border-radius: 6px;
     display: inline-block;
-    margin-bottom: 1.25rem;
+    margin-bottom: 0.75rem;
     text-transform: uppercase;
     letter-spacing: 0.5px;
     background: rgba(255, 255, 255, 0.04);

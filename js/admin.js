@@ -874,8 +874,10 @@ if (form) {
             mockCompanies.push({
                 id, name, password, level, modules, banks: [], files: [], capitalSocial: parseFloat(document.getElementById('admin-comp-capital').value) || 0
             });
+            editingCompanyId = id;
             saveAdminData();
             alert(`Cliente "${name}" cadastrado com sucesso!\nID liberado: ${id}`);
+            editingCompanyId = null;
         } else {
             const comp = mockCompanies.find(c => c.id === id);
             comp.name = name;

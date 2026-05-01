@@ -133,71 +133,93 @@ document.addEventListener('DOMContentLoaded', () => {
         doc.setLineWidth(1);
         doc.line(15, 60, 100, 60);
 
-        // 3. AI Analysis Section (The "Chat" content)
+        // 3. AI Analysis Section (CLEANED)
         let y = 70;
         if (analysisText) {
-            doc.setFontSize(12);
+            doc.setFontSize(14);
             doc.setTextColor(...primaryColor);
-            doc.text("Parecer da Consultoria", 15, y);
-            y += 7;
+            doc.text("Parecer Técnico da Consultoria", 15, y);
+            y += 8;
+
+            // CLEANING LOGIC
+            let cleanLines = analysisText
+                .replace(/<[^>]*>/g, '') // Remove ALL HTML tags
+                .replace(/\[ACTION:.*?\]/g, '') // Remove internal actions
+                .split('\n')
+                .filter(line => {
+                    const l = line.trim();
+                    if (!l) return false;
+                    if (l.endsWith('?')) return false; // Remove questions
+                    if (l.includes('Navegando para')) return false; // Remove system msg
+                    if (l.includes('Sincronizando')) return false;
+                    return true;
+                });
+
+            const finalCleanText = cleanLines.join('\n').replace(/\n\n+/g, '\n\n');
+            
             doc.setFont("helvetica", "normal");
-            doc.setFontSize(9);
+            doc.setFontSize(10);
             doc.setTextColor(51, 65, 85);
             
-            // Clean markdown and split text
-            const cleanAnalysis = analysisText.replace(/<br>/g, '\n').replace(/<strong>/g, '').replace(/<\/strong>/g, '');
-            const lines = doc.splitTextToSize(cleanAnalysis, 180);
+            const lines = doc.splitTextToSize(finalCleanText, 175);
+            
+            // Add a subtle left accent line for the analysis
+            doc.setDrawColor(226, 232, 240);
+            doc.setLineWidth(0.5);
+            doc.line(12, y, 12, y + (lines.length * 5));
+
             doc.text(lines, 15, y);
-            y += (lines.length * 4) + 15;
+            y += (lines.length * 5) + 20;
         }
 
-        if (y > 200) { doc.addPage(); y = 20; }
+        // FORCE PAGE BREAK IF NEEDED
+        if (y > 180) { doc.addPage(); y = 30; }
 
         // 4. Key Metrics Section
         doc.setFont("helvetica", "bold");
-        doc.setFontSize(12);
+        doc.setFontSize(13);
         doc.setTextColor(...primaryColor);
         doc.text("Principais Indicadores", 15, y);
-        y += 8;
+        y += 10;
 
-        const ebitda = data.ebitda || (data.lucro_liquido + (data.impostos || 0) * 0.2); // Fallback calculation
+        const ebitda = data.ebitda || (data.lucro_liquido + (data.impostos || 0) * 0.2);
         const margem = data.margem_lucro || ((data.lucro_liquido / data.receita_total) * 100).toFixed(1);
 
         const metrics = [
-            { label: "Faturamento", value: formatBRL(data.receita_total || 0) },
+            { label: "Faturamento Bruto", value: formatBRL(data.receita_total || 0) },
             { label: "Lucro Líquido", value: formatBRL(data.lucro_liquido || 0) },
             { label: "Margem Líquida", value: `${margem}%` },
-            { label: "EBITDA Estimado", value: formatBRL(ebitda || 0) }
+            { label: "EBITDA Projetado", value: formatBRL(ebitda || 0) }
         ];
 
         metrics.forEach((m, i) => {
             const posX = 15 + (i % 2) * 92;
             doc.setFillColor(248, 250, 252);
-            doc.rect(posX, y, 88, 18, 'F');
+            doc.rect(posX, y, 88, 20, 'F');
             doc.setFontSize(8);
             doc.setTextColor(100, 116, 139);
-            doc.text(m.label, posX + 5, y + 6);
-            doc.setFontSize(10);
+            doc.text(m.label, posX + 5, y + 7);
+            doc.setFontSize(11);
             doc.setTextColor(...primaryColor);
-            doc.text(m.value, posX + 5, y + 13);
-            if (i === 1) y += 22;
+            doc.text(m.value, posX + 5, y + 15);
+            if (i === 1) y += 25;
         });
 
-        // 5. DRE Table
+        // 5. DRE Table (MOVED FURTHER DOWN)
         y += 15;
-        if (y > 220) { doc.addPage(); y = 20; }
+        if (y > 210) { doc.addPage(); y = 30; }
         doc.setFont("helvetica", "bold");
-        doc.setFontSize(12);
+        doc.setFontSize(13);
         doc.text("Resumo Gerencial (DRE)", 15, y);
-        y += 8;
+        y += 10;
 
         doc.setFillColor(...primaryColor);
-        doc.rect(15, y, 180, 8, 'F');
+        doc.rect(15, y, 180, 10, 'F');
         doc.setTextColor(255, 255, 255);
         doc.setFontSize(9);
-        doc.text("Categoria", 20, y + 5.5);
-        doc.text("Valor", 190, y + 5.5, { align: "right" });
-        y += 8;
+        doc.text("Categoria", 20, y + 6.5);
+        doc.text("Valor", 190, y + 6.5, { align: "right" });
+        y += 10;
 
         const rows = [
             { l: "Receita Bruta", v: data.receita_total || 0 },
@@ -214,44 +236,41 @@ document.addEventListener('DOMContentLoaded', () => {
             else if (i % 2 === 0) doc.setFillColor(241, 245, 249);
             else doc.setFillColor(255, 255, 255);
             
-            doc.rect(15, y, 180, 7, 'F');
+            doc.rect(15, y, 180, 8, 'F');
             doc.setTextColor(0, 0, 0);
-            if (r.b) doc.setFont("helvetica", "bold");
-            else doc.setFont("helvetica", "normal");
+            doc.setFont("helvetica", r.b ? "bold" : "normal");
             
-            doc.text(r.l, 20, y + 4.5);
-            doc.text(formatBRL(r.v), 190, y + 4.5, { align: "right" });
-            y += 7;
+            doc.text(r.l, 20, y + 5);
+            doc.text(formatBRL(r.v), 190, y + 5, { align: "right" });
+            y += 8;
         });
 
         // 6. Bank Accounts
         if (data.contas_bancarias && data.contas_bancarias.length > 0) {
             y += 10;
-            if (y > 240) { doc.addPage(); y = 20; }
+            if (y > 240) { doc.addPage(); y = 30; }
             doc.setFont("helvetica", "bold");
-            doc.setFontSize(12);
-            doc.text("Saldos Bancários", 15, y);
-            y += 8;
+            doc.setFontSize(13);
+            doc.text("Saldos em Conta", 15, y);
+            y += 10;
 
             data.contas_bancarias.forEach(c => {
                 doc.setFillColor(248, 250, 252);
                 doc.rect(15, y, 180, 10, 'F');
                 doc.setFontSize(9);
                 doc.setTextColor(...primaryColor);
-                doc.text(c.banco || "Banco", 20, y + 6);
+                doc.text(c.banco || "Instituição Financeira", 20, y + 6);
                 doc.text(formatBRL(c.saldo_atual || 0), 190, y + 6, { align: "right" });
-                y += 11;
+                y += 12;
             });
         }
 
-        // Footer with Version Stamp (to verify cache update)
+        // Footer with Version Stamp
         doc.setFontSize(7);
         doc.setTextColor(148, 163, 184);
         const timestamp = new Date().toLocaleString('pt-BR');
-        doc.text(`Diagnóstico LIA v2.0 - Gerado em ${timestamp}`, 105, 280, { align: "center" });
-        doc.text(`Este documento é uma análise gerencial gerada por Inteligência Artificial e não substitui a contabilidade oficial.`, 105, 285, { align: "center" });
+        doc.text(`Relatório Executivo LIA - Gerado em ${timestamp} | CLARUS EVOLUA`, 105, 285, { align: "center" });
 
-        console.log("PDF Gerado com sucesso. Versão 2.0. Texto de análise:", analysisText ? "Sim" : "Não");
         doc.save(`Relatorio_LIA_${monthLabel.replace(' ', '_')}.pdf`);
     };
 

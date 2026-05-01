@@ -133,44 +133,35 @@ document.addEventListener('DOMContentLoaded', () => {
         doc.setLineWidth(1);
         doc.line(15, 60, 100, 60);
 
-        // 3. AI Analysis Section (CLEANED)
+        // 3. AI Analysis Section (RECOVERED)
         let y = 70;
-        if (analysisText && analysisText.length > 10) {
+        if (analysisText && analysisText.length > 5) {
             doc.setFontSize(14);
             doc.setTextColor(...primaryColor);
             doc.text("Parecer Técnico da Consultoria", 15, y);
             y += 10;
 
-            // STRONGER CLEANING
-            const cleanAnalysis = analysisText
-                .replace(/<[^>]*>/g, '') 
-                .replace(/\[ACTION:.*?\]/g, '')
+            // SIMPLE CLEANING - Keep it reliable
+            const finalCleanText = analysisText
+                .replace(/<[^>]*>/g, '') // Remove HTML
+                .replace(/\[ACTION:.*?\]/g, '') // Remove Actions
                 .replace(/BAIXAR RELATÓRIO PDF COMPLETO/g, '')
+                .replace(/Preparando Relatório PDF\.\.\./g, '')
                 .trim();
-
-            const cleanLines = cleanAnalysis.split('\n').filter(line => {
-                const l = line.trim();
-                if (!l || l.length < 2) return false;
-                if (l.endsWith('?') && l.length < 100) return false; // Filter short questions
-                if (l.includes('Navegando para') || l.includes('Sincronizando')) return false;
-                return true;
-            });
-
-            const finalCleanText = cleanLines.join('\n').replace(/\n\n+/g, '\n\n');
             
             doc.setFont("helvetica", "normal");
             doc.setFontSize(10);
-            doc.setTextColor(51, 65, 85);
+            doc.setTextColor(...primaryColor); // High contrast
             
             const lines = doc.splitTextToSize(finalCleanText, 175);
             
-            // Subtle left accent
-            doc.setDrawColor(226, 232, 240);
+            // Left accent line
+            doc.setDrawColor(accentColor[0], accentColor[1], accentColor[2]);
             doc.setLineWidth(0.5);
-            doc.line(12, y, 12, y + (lines.length * 5.5));
+            doc.line(12, y, 12, y + (lines.length * 5.2));
 
             doc.text(lines, 15, y);
-            y += (lines.length * 5.5) + 25; // Massive gap after analysis
+            y += (lines.length * 5.2) + 20;
         }
 
         // FORCE PAGE BREAK IF SPACE IS TIGHT

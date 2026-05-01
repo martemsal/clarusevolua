@@ -84,13 +84,15 @@ document.addEventListener('DOMContentLoaded', () => {
         throw new Error(lastError || "Todos os modelos falharam.");
     };
 
-    const generatePDFReport = async (data, monthLabel) => {
+    const generatePDFReport = async (data, monthLabel, analysisText = "") => {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
         const primaryColor = [15, 23, 42]; // Slate 900
         const accentColor = [251, 191, 36]; // Gold
 
-        // 1. Header with Logo
+        const companyName = document.getElementById('display-company-name')?.textContent || 'Cliente';
+
+        // 1. Header with Logo & Client Name
         try {
             const logo = new Image();
             const globalSettings = JSON.parse(localStorage.getItem('clarusGlobalSettings') || '{}');
@@ -106,58 +108,85 @@ document.addEventListener('DOMContentLoaded', () => {
 
         doc.setTextColor(255, 255, 255);
         doc.setFontSize(10);
-        doc.text("CLARUS EVOLUA - Inteligência Estratégica", 195, 20, { align: "right" });
-        doc.text(monthLabel, 195, 28, { align: "right" });
+        doc.text(companyName, 195, 18, { align: "right" });
+        doc.text("LIA - Inteligência Estratégica", 195, 24, { align: "right" });
+        doc.text(monthLabel, 195, 30, { align: "right" });
 
         // 2. Report Title
         doc.setTextColor(...primaryColor);
         doc.setFont("helvetica", "bold");
         doc.setFontSize(22);
-        doc.text("Relatório de Performance Financeira", 15, 60);
+        doc.text("Diagnóstico de Performance", 15, 55);
         
         doc.setDrawColor(...accentColor);
         doc.setLineWidth(1);
-        doc.line(15, 65, 100, 65);
+        doc.line(15, 60, 100, 60);
 
-        // 3. Key Metrics Section
-        let y = 80;
-        doc.setFontSize(14);
-        doc.text("Indicadores de Desempenho", 15, y);
-        y += 10;
+        // 3. AI Analysis Section (The "Chat" content)
+        let y = 70;
+        if (analysisText) {
+            doc.setFontSize(12);
+            doc.setTextColor(...primaryColor);
+            doc.text("Parecer da Consultoria", 15, y);
+            y += 7;
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(9);
+            doc.setTextColor(51, 65, 85);
+            
+            // Clean markdown and split text
+            const cleanAnalysis = analysisText.replace(/<br>/g, '\n').replace(/<strong>/g, '').replace(/<\/strong>/g, '');
+            const lines = doc.splitTextToSize(cleanAnalysis, 180);
+            doc.text(lines, 15, y);
+            y += (lines.length * 4) + 15;
+        }
+
+        if (y > 200) { doc.addPage(); y = 20; }
+
+        // 4. Key Metrics Section
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(12);
+        doc.setTextColor(...primaryColor);
+        doc.text("Principais Indicadores", 15, y);
+        y += 8;
+
+        const ebitda = data.ebitda || (data.lucro_liquido + (data.impostos || 0) * 0.2); // Fallback calculation
+        const margem = data.margem_lucro || ((data.lucro_liquido / data.receita_total) * 100).toFixed(1);
 
         const metrics = [
-            { label: "Receita Total", value: formatBRL(data.receita_total || 0) },
+            { label: "Faturamento", value: formatBRL(data.receita_total || 0) },
             { label: "Lucro Líquido", value: formatBRL(data.lucro_liquido || 0) },
-            { label: "Margem de Lucro", value: `${data.margem_lucro || 0}%` },
-            { label: "EBITDA", value: formatBRL(data.ebitda || 0) }
+            { label: "Margem Líquida", value: `${margem}%` },
+            { label: "EBITDA Estimado", value: formatBRL(ebitda || 0) }
         ];
 
         metrics.forEach((m, i) => {
+            const posX = 15 + (i % 2) * 92;
             doc.setFillColor(248, 250, 252);
-            doc.rect(15 + (i % 2) * 90, y, 85, 20, 'F');
-            doc.setFontSize(9);
+            doc.rect(posX, y, 88, 18, 'F');
+            doc.setFontSize(8);
             doc.setTextColor(100, 116, 139);
-            doc.text(m.label, 20 + (i % 2) * 90, y + 7);
-            doc.setFontSize(11);
+            doc.text(m.label, posX + 5, y + 6);
+            doc.setFontSize(10);
             doc.setTextColor(...primaryColor);
-            doc.text(m.value, 20 + (i % 2) * 90, y + 15);
-            if (i === 1) y += 25;
+            doc.text(m.value, posX + 5, y + 13);
+            if (i === 1) y += 22;
         });
 
-        // 4. DRE Table
-        y += 10;
-        doc.setFontSize(14);
-        doc.text("Demonstrativo de Resultados (DRE)", 15, y);
-        y += 10;
+        // 5. DRE Table
+        y += 15;
+        if (y > 220) { doc.addPage(); y = 20; }
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(12);
+        doc.text("Resumo Gerencial (DRE)", 15, y);
+        y += 8;
 
-        const tableHeader = ["Categoria", "Valor"];
         doc.setFillColor(...primaryColor);
-        doc.rect(15, y, 180, 10, 'F');
+        doc.rect(15, y, 180, 8, 'F');
         doc.setTextColor(255, 255, 255);
-        doc.setFontSize(10);
-        doc.text(tableHeader[0], 20, y + 7);
-        doc.text(tableHeader[1], 190, y + 7, { align: "right" });
-        y += 10;
+        doc.setFontSize(9);
+        doc.text("Categoria", 20, y + 5.5);
+        doc.text("Valor", 190, y + 5.5, { align: "right" });
+        y += 8;
 
         const rows = [
             { l: "Receita Bruta", v: data.receita_total || 0 },
@@ -174,54 +203,48 @@ document.addEventListener('DOMContentLoaded', () => {
             else if (i % 2 === 0) doc.setFillColor(241, 245, 249);
             else doc.setFillColor(255, 255, 255);
             
-            doc.rect(15, y, 180, 8, 'F');
+            doc.rect(15, y, 180, 7, 'F');
             doc.setTextColor(0, 0, 0);
             if (r.b) doc.setFont("helvetica", "bold");
             else doc.setFont("helvetica", "normal");
             
-            doc.text(r.l, 20, y + 5.5);
-            doc.text(formatBRL(r.v), 190, y + 5.5, { align: "right" });
-            y += 8;
+            doc.text(r.l, 20, y + 4.5);
+            doc.text(formatBRL(r.v), 190, y + 4.5, { align: "right" });
+            y += 7;
         });
 
-        // 5. Bank Accounts Section (NEW)
+        // 6. Bank Accounts
         if (data.contas_bancarias && data.contas_bancarias.length > 0) {
             y += 10;
-            if (y > 250) { doc.addPage(); y = 20; }
+            if (y > 240) { doc.addPage(); y = 20; }
             doc.setFont("helvetica", "bold");
-            doc.setFontSize(14);
-            doc.setTextColor(...primaryColor);
-            doc.text("Saldos e Fluxo Bancário", 15, y);
-            y += 10;
+            doc.setFontSize(12);
+            doc.text("Saldos Bancários", 15, y);
+            y += 8;
 
             data.contas_bancarias.forEach(c => {
                 doc.setFillColor(248, 250, 252);
-                doc.rect(15, y, 180, 15, 'F');
-                doc.setFontSize(10);
+                doc.rect(15, y, 180, 10, 'F');
+                doc.setFontSize(9);
                 doc.setTextColor(...primaryColor);
                 doc.text(c.banco || "Banco", 20, y + 6);
-                doc.setFontSize(8);
-                doc.setTextColor(100, 116, 139);
-                doc.text(`Entradas: ${formatBRL(c.entradas || 0)} | Saídas: ${formatBRL(c.saidas || 0)}`, 20, y + 11);
-                doc.setFontSize(10);
-                doc.setTextColor(...primaryColor);
-                doc.text(formatBRL(c.saldo_atual || 0), 190, y + 9, { align: "right" });
-                y += 18;
+                doc.text(formatBRL(c.saldo_atual || 0), 190, y + 6, { align: "right" });
+                y += 11;
             });
         }
 
-        // 6. Footer
-        doc.setFontSize(8);
+        // Footer
+        doc.setFontSize(7);
         doc.setTextColor(148, 163, 184);
-        doc.text(`Gerado por LIA - Assistente de IA Clarus Evolua em ${new Date().toLocaleDateString()}`, 105, 285, { align: "center" });
+        doc.text(`Este documento é uma análise gerencial gerada por Inteligência Artificial e não substitui a contabilidade oficial.`, 105, 285, { align: "center" });
 
         doc.save(`Relatorio_LIA_${monthLabel.replace(' ', '_')}.pdf`);
     };
 
-    window.downloadLIAForPeriod = (val, label) => {
+    window.downloadLIAForPeriod = (val, label, analysisText = "") => {
         const userId = localStorage.getItem('clarusSessionId');
         const raw = localStorage.getItem(`clarusData_${userId}_${val}`);
-        if (raw) generatePDFReport(JSON.parse(raw), label);
+        if (raw) generatePDFReport(JSON.parse(raw), label, analysisText);
         else alert("Dados não encontrados para este período.");
     };
 
@@ -243,7 +266,10 @@ document.addEventListener('DOMContentLoaded', () => {
             btn.innerHTML = `<i class="fa-solid fa-file-pdf"></i> BAIXAR RELATÓRIO PDF COMPLETO`;
             btn.onmouseover = () => btn.style.transform = 'translateY(-2px)';
             btn.onmouseout = () => btn.style.transform = 'translateY(0)';
-            btn.onclick = () => window.downloadLIAForPeriod(currentLIAMonthVal, currentLIAMonthLabel);
+            
+            // PASS THE CURRENT TEXT TO THE DOWNLOAD FUNCTION
+            btn.onclick = () => window.downloadLIAForPeriod(currentLIAMonthVal, currentLIAMonthLabel, cleanText);
+            
             msgDiv.appendChild(btn);
         }
 

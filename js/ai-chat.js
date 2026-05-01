@@ -184,7 +184,33 @@ document.addEventListener('DOMContentLoaded', () => {
             y += 8;
         });
 
-        // 5. Footer
+        // 5. Bank Accounts Section (NEW)
+        if (data.contas_bancarias && data.contas_bancarias.length > 0) {
+            y += 10;
+            if (y > 250) { doc.addPage(); y = 20; }
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(14);
+            doc.setTextColor(...primaryColor);
+            doc.text("Saldos e Fluxo Bancário", 15, y);
+            y += 10;
+
+            data.contas_bancarias.forEach(c => {
+                doc.setFillColor(248, 250, 252);
+                doc.rect(15, y, 180, 15, 'F');
+                doc.setFontSize(10);
+                doc.setTextColor(...primaryColor);
+                doc.text(c.banco || "Banco", 20, y + 6);
+                doc.setFontSize(8);
+                doc.setTextColor(100, 116, 139);
+                doc.text(`Entradas: ${formatBRL(c.entradas || 0)} | Saídas: ${formatBRL(c.saidas || 0)}`, 20, y + 11);
+                doc.setFontSize(10);
+                doc.setTextColor(...primaryColor);
+                doc.text(formatBRL(c.saldo_atual || 0), 190, y + 9, { align: "right" });
+                y += 18;
+            });
+        }
+
+        // 6. Footer
         doc.setFontSize(8);
         doc.setTextColor(148, 163, 184);
         doc.text(`Gerado por LIA - Assistente de IA Clarus Evolua em ${new Date().toLocaleDateString()}`, 105, 285, { align: "center" });
@@ -197,6 +223,32 @@ document.addEventListener('DOMContentLoaded', () => {
         const raw = localStorage.getItem(`clarusData_${userId}_${val}`);
         if (raw) generatePDFReport(JSON.parse(raw), label);
         else alert("Dados não encontrados para este período.");
+    };
+
+    const addMessage = (text, sender) => {
+        const msgDiv = document.createElement('div');
+        msgDiv.className = `chat-message ${sender}`;
+        
+        // Remove action placeholders if they exist
+        let cleanText = text.replace(/\[ACTION:.*?\]/g, '');
+        cleanText = cleanText.replace(/Preparando Relatório PDF\.\.\./g, '');
+        
+        msgDiv.innerHTML = cleanText;
+        
+        // Add Download PDF button to all BOT messages
+        if (sender === 'bot') {
+            const btn = document.createElement('button');
+            btn.className = 'btn-primary';
+            btn.style.cssText = 'padding:10px 14px; font-size:0.8rem; width:100%; margin-top:15px; cursor:pointer; background:var(--accent-gold); color:#000; border:none; border-radius:8px; font-weight:700; box-shadow: 0 4px 15px rgba(0,0,0,0.2); transition: all 0.3s ease;';
+            btn.innerHTML = `<i class="fa-solid fa-file-pdf"></i> BAIXAR RELATÓRIO PDF COMPLETO`;
+            btn.onmouseover = () => btn.style.transform = 'translateY(-2px)';
+            btn.onmouseout = () => btn.style.transform = 'translateY(0)';
+            btn.onclick = () => window.downloadLIAForPeriod(currentLIAMonthVal, currentLIAMonthLabel);
+            msgDiv.appendChild(btn);
+        }
+
+        messagesBox.appendChild(msgDiv);
+        messagesBox.scrollTop = messagesBox.scrollHeight;
     };
 
     const generateResponse = async (query) => {

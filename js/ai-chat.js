@@ -38,12 +38,9 @@ document.addEventListener('DOMContentLoaded', () => {
         return found;
     };
 
-    const callGemini = async (userMessage, jsonData, month) => {
+    const callGemini = async (userMessage, jsonData, month, instructions = "") => {
         const apiKey = localStorage.getItem('clarusGeminiKey');
-        if (!apiKey) {
-            console.log("LIA: Gemini API Key não encontrada no localStorage.");
-            return null;
-        }
+        if (!apiKey) return null;
 
         const companyName = document.getElementById('display-company-name')?.textContent || 'Cliente';
         const systemPrompt = `Você é a LIA da CLARUS EVOLUA. Personalidade: Consultora Financeira de Elite, Amigável e Estratégica.
@@ -63,7 +60,6 @@ Dados atuais do cliente em JSON: ${JSON.stringify(jsonData)}.
 Responda sempre com base nestas fórmulas e sugira ações práticas de melhoria.`;
 
         try {
-            console.log("LIA: Tentando conexão com Gemini API...");
             const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -73,18 +69,16 @@ Responda sempre com base nestas fórmulas e sugira ações práticas de melhoria
             });
 
             if (!response.ok) {
-                const errData = await response.json();
-                console.error("LIA: Erro Gemini API Status:", response.status, errData);
-                return null;
+                const errData = await response.json().catch(() => ({}));
+                const errMsg = errData.error?.message || response.statusText;
+                throw new Error(`Google API (${response.status}): ${errMsg}`);
             }
 
             const data = await response.json();
-            const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-            if (text) console.log("LIA: Resposta recebida do Gemini com sucesso.");
-            return text || null;
+            return data.candidates?.[0]?.content?.parts?.[0]?.text || "Não consegui processar essa informação agora.";
         } catch (error) {
-            console.error("LIA: Erro de Rede ou Conexão com Gemini:", error);
-            return null;
+            console.error("LIA: Falha na conexão:", error);
+            throw error;
         }
     };
 

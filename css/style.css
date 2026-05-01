@@ -1,5 +1,7 @@
 html {
-    font-size: 12px; /* Equivale a 75% do padrão de 16px, reduzindo a interface inteira perfeitamente */
+    zoom: 0.8;
+    -moz-transform: scale(0.8);
+    -moz-transform-origin: 0 0;
 }
 
 :root {
@@ -545,7 +547,7 @@ body.light-theme .topbar .page-title h2 {
 .nav-item {
     display: flex;
     align-items: center;
-    padding: 0.875rem 1rem;
+    padding: 0.65rem 1rem;
     color: var(--text-secondary);
     text-decoration: none;
     border-radius: var(--border-radius-sm);

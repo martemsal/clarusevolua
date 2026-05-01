@@ -135,25 +135,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // 3. AI Analysis Section (CLEANED)
         let y = 70;
-        if (analysisText) {
+        if (analysisText && analysisText.length > 10) {
             doc.setFontSize(14);
             doc.setTextColor(...primaryColor);
             doc.text("Parecer Técnico da Consultoria", 15, y);
-            y += 8;
+            y += 10;
 
-            // CLEANING LOGIC
-            let cleanLines = analysisText
-                .replace(/<[^>]*>/g, '') // Remove ALL HTML tags
-                .replace(/\[ACTION:.*?\]/g, '') // Remove internal actions
-                .split('\n')
-                .filter(line => {
-                    const l = line.trim();
-                    if (!l) return false;
-                    if (l.endsWith('?')) return false; // Remove questions
-                    if (l.includes('Navegando para')) return false; // Remove system msg
-                    if (l.includes('Sincronizando')) return false;
-                    return true;
-                });
+            // STRONGER CLEANING
+            const cleanAnalysis = analysisText
+                .replace(/<[^>]*>/g, '') 
+                .replace(/\[ACTION:.*?\]/g, '')
+                .replace(/BAIXAR RELATÓRIO PDF COMPLETO/g, '')
+                .trim();
+
+            const cleanLines = cleanAnalysis.split('\n').filter(line => {
+                const l = line.trim();
+                if (!l || l.length < 2) return false;
+                if (l.endsWith('?') && l.length < 100) return false; // Filter short questions
+                if (l.includes('Navegando para') || l.includes('Sincronizando')) return false;
+                return true;
+            });
 
             const finalCleanText = cleanLines.join('\n').replace(/\n\n+/g, '\n\n');
             
@@ -163,24 +164,24 @@ document.addEventListener('DOMContentLoaded', () => {
             
             const lines = doc.splitTextToSize(finalCleanText, 175);
             
-            // Add a subtle left accent line for the analysis
+            // Subtle left accent
             doc.setDrawColor(226, 232, 240);
             doc.setLineWidth(0.5);
-            doc.line(12, y, 12, y + (lines.length * 5));
+            doc.line(12, y, 12, y + (lines.length * 5.5));
 
             doc.text(lines, 15, y);
-            y += (lines.length * 5) + 20;
+            y += (lines.length * 5.5) + 25; // Massive gap after analysis
         }
 
-        // FORCE PAGE BREAK IF NEEDED
-        if (y > 180) { doc.addPage(); y = 30; }
+        // FORCE PAGE BREAK IF SPACE IS TIGHT
+        if (y > 170) { doc.addPage(); y = 30; }
 
         // 4. Key Metrics Section
         doc.setFont("helvetica", "bold");
         doc.setFontSize(13);
         doc.setTextColor(...primaryColor);
         doc.text("Principais Indicadores", 15, y);
-        y += 10;
+        y += 12;
 
         const ebitda = data.ebitda || (data.lucro_liquido + (data.impostos || 0) * 0.2);
         const margem = data.margem_lucro || ((data.lucro_liquido / data.receita_total) * 100).toFixed(1);
@@ -192,22 +193,28 @@ document.addEventListener('DOMContentLoaded', () => {
             { label: "EBITDA Projetado", value: formatBRL(ebitda || 0) }
         ];
 
+        // RENDER METRICS IN 2x2 GRID WITH FIXED POSITIONS
+        const metricsStartY = y;
         metrics.forEach((m, i) => {
-            const posX = 15 + (i % 2) * 92;
+            const row = Math.floor(i / 2);
+            const col = i % 2;
+            const posX = 15 + col * 92;
+            const posY = metricsStartY + row * 28;
+            
             doc.setFillColor(248, 250, 252);
-            doc.rect(posX, y, 88, 20, 'F');
+            doc.rect(posX, posY, 88, 22, 'F');
             doc.setFontSize(8);
             doc.setTextColor(100, 116, 139);
-            doc.text(m.label, posX + 5, y + 7);
-            doc.setFontSize(11);
+            doc.text(m.label, posX + 6, posY + 8);
+            doc.setFontSize(12);
             doc.setTextColor(...primaryColor);
-            doc.text(m.value, posX + 5, y + 15);
-            if (i === 1) y += 25;
+            doc.text(m.value, posX + 6, posY + 17);
         });
 
-        // 5. DRE Table (MOVED FURTHER DOWN)
-        y += 15;
+        // 5. DRE Table - ENSURE NO OVERLAP
+        y = metricsStartY + 70; // Hard jump below metrics grid
         if (y > 210) { doc.addPage(); y = 30; }
+        
         doc.setFont("helvetica", "bold");
         doc.setFontSize(13);
         doc.text("Resumo Gerencial (DRE)", 15, y);
@@ -240,8 +247,8 @@ document.addEventListener('DOMContentLoaded', () => {
             doc.setTextColor(0, 0, 0);
             doc.setFont("helvetica", r.b ? "bold" : "normal");
             
-            doc.text(r.l, 20, y + 5);
-            doc.text(formatBRL(r.v), 190, y + 5, { align: "right" });
+            doc.text(r.l, 20, y + 5.5);
+            doc.text(formatBRL(r.v), 190, y + 5.5, { align: "right" });
             y += 8;
         });
 

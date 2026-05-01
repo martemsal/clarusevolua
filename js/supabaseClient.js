@@ -11,10 +11,10 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 window.db = {};
 
 // Inicializa o cliente do Supabase
-let supabase;
+let _supabaseClient;
 try {
     if (window.supabase) {
-        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        _supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         console.log("✅ [Supabase] Cliente inicializado.");
     } else {
         console.error("❌ [Supabase] CDN não foi carregada no index.html!");
@@ -26,8 +26,8 @@ try {
 Object.assign(window.db, {
     // --- GESTÃO DE CLIENTES (COMPANIES) ---
     async getCompanies() {
-        if (!supabase) return [];
-        const { data, error } = await supabase
+        if (!_supabaseClient) return [];
+        const { data, error } = await _supabaseClient
             .from('companies')
             .select('*');
         if (error) {
@@ -38,7 +38,7 @@ Object.assign(window.db, {
     },
 
     async saveCompany(comp) {
-        if (!supabase) return { success: false, error: "Supabase client not initialized" };
+        if (!_supabaseClient) return { success: false, error: "Supabase client not initialized" };
         console.log("📤 [Supabase] Tentando salvar empresa:", comp.id);
         
         // Sanitização e Preparação
@@ -53,7 +53,7 @@ Object.assign(window.db, {
             files: Array.isArray(comp.files) ? comp.files : []
         };
 
-        const { data, error } = await supabase
+        const { data, error } = await _supabaseClient
             .from('companies')
             .upsert(payload, { onConflict: 'id' });
             
@@ -66,7 +66,7 @@ Object.assign(window.db, {
     },
 
     async deleteCompany(id) {
-        const { error } = await supabase
+        const { error } = await _supabaseClient
             .from('companies')
             .delete()
             .eq('id', id);
@@ -80,7 +80,7 @@ Object.assign(window.db, {
 
     // --- DADOS FINANCEIROS (DRE e FLUXO) ---
     async getFinancialData(companyId, month, dataType) {
-        const { data, error } = await supabase
+        const { data, error } = await _supabaseClient
             .from('financial_data')
             .select('payload')
             .eq('company_id', companyId)
@@ -96,7 +96,7 @@ Object.assign(window.db, {
     },
 
     async getAllFinancialData(companyId) {
-        const { data, error } = await supabase
+        const { data, error } = await _supabaseClient
             .from('financial_data')
             .select('*')
             .eq('company_id', companyId);
@@ -109,7 +109,7 @@ Object.assign(window.db, {
     },
 
     async saveFinancialData(companyId, month, dataType, payload) {
-        const { error } = await supabase
+        const { error } = await _supabaseClient
             .from('financial_data')
             .upsert({
                 company_id: companyId,
@@ -123,7 +123,7 @@ Object.assign(window.db, {
     },
 
     async deleteFinancialData(companyId, month) {
-        const { error } = await supabase
+        const { error } = await _supabaseClient
             .from('financial_data')
             .delete()
             .eq('company_id', companyId)
@@ -134,7 +134,7 @@ Object.assign(window.db, {
 
     // --- NOTIFICAÇÕES ---
     async getNotifications(companyId) {
-        const { data, error } = await supabase
+        const { data, error } = await _supabaseClient
             .from('notifications')
             .select('*')
             .eq('company_id', companyId)
@@ -148,7 +148,7 @@ Object.assign(window.db, {
     },
 
     async sendNotification(companyId, text) {
-        const { error } = await supabase
+        const { error } = await _supabaseClient
             .from('notifications')
             .insert({
                 company_id: companyId,

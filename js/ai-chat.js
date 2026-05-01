@@ -38,47 +38,58 @@ document.addEventListener('DOMContentLoaded', () => {
         return found;
     };
 
-    const callGemini = async (userMessage, jsonData, month, instructions = "") => {
-        const apiKey = localStorage.getItem('clarusGeminiKey');
-        if (!apiKey) return null;
+    const callGemini = async (query, context, actionPrompt = "") => {
+        const apiKey = localStorage.getItem('clarusGeminiKey')?.trim();
+        if (!apiKey) throw new Error("API Key não encontrada.");
 
         const companyName = document.getElementById('display-company-name')?.textContent || 'Cliente';
-        const systemPrompt = `Você é a LIA da CLARUS EVOLUA. Consultora Financeira de Elite. 
-        Analise os dados de ${month} do cliente ${companyName} com base nestas diretrizes:
-        1. Margem Líquida (>10%), EBITDA, Fluxo de Caixa, Ciclo Financeiro, NCG, Endividamento, Ticket Médio, CAC/LTV e Produtividade.
-        Dados: ${JSON.stringify(jsonData)}.
-        Instruções Adicionais: ${instructions}
-        Responda de forma estratégica e sugira ações práticas.`;
+        const prompt = `Você é a LIA (Leitura Inteligente Avançada), uma consultora financeira de elite.
+        CONTEXTO ATUAL:
+        - Empresa: ${companyName}
+        - Dados: ${JSON.stringify(context)}
+        - Período: ${actionPrompt}
+        
+        INSTRUÇÕES:
+        1. Seja direto, profissional e use termos de mercado (EBITDA, Margem, etc).
+        2. Analise os saldos bancários e o lucro.
+        3. Use negrito para valores e pontos importantes.
+        
+        PERGUNTA DO USUÁRIO: ${query}`;
 
-        // Tenta vários modelos possíveis para garantir compatibilidade
         const models = ['gemini-flash-latest', 'gemini-1.5-flash', 'gemini-pro'];
-        let lastError = null;
+        const versions = ['v1beta', 'v1'];
+        let lastError = "";
 
         for (const modelName of models) {
-            try {
-                for (const ver of ['v1beta', 'v1']) {
-                    const response = await fetch(`https://generativelanguage.googleapis.com/${ver}/models/${modelName}:generateContent`, {
+            for (const ver of versions) {
+                try {
+                    const url = `https://generativelanguage.googleapis.com/${ver}/models/${modelName}:generateContent?key=${apiKey}`;
+                    console.log(`LIA: Tentando ${ver}/${modelName}...`);
+
+                    const response = await fetch(url, {
                         method: 'POST',
                         headers: { 
                             'Content-Type': 'application/json',
                             'X-goog-api-key': apiKey 
                         },
                         body: JSON.stringify({
-                            contents: [{ parts: [{ text: `${systemPrompt}\n\nUsuário pergunta: ${userMessage}` }] }]
+                            contents: [{ parts: [{ text: prompt }] }]
                         })
                     });
 
-                    if (response.ok) {
-                        const data = await response.json();
-                        return data.candidates?.[0]?.content?.parts?.[0]?.text || "Não consegui processar agora.";
-                    } else {
-                        const errData = await response.json().catch(() => ({}));
-                        lastError = `Google API (${ver}/${modelName}): ${errData.error?.message || response.statusText}`;
-                        console.warn(`LIA: Tentativa com ${ver}/${modelName} falhou...`);
+                    const data = await response.json();
+                    if (data.candidates && data.candidates[0].content.parts[0].text) {
+                        console.log(`LIA: Sucesso com ${ver}/${modelName}`);
+                        return data.candidates[0].content.parts[0].text;
                     }
+                    
+                    if (data.error) {
+                        lastError = `[${ver}/${modelName}] ${data.error.message}`;
+                        console.warn(`LIA: Erro em ${modelName}:`, data.error.message);
+                    }
+                } catch (e) {
+                    lastError = e.message;
                 }
-            } catch (e) {
-                lastError = e.message;
             }
         }
         throw new Error(lastError || "Todos os modelos falharam.");

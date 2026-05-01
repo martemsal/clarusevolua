@@ -121,37 +121,92 @@ Responda sempre com base nestas fórmulas e sugira ações práticas de melhoria
         const text = query.toLowerCase();
         const found = extractMonthsFromQuery(text);
         if (found.length > 0) { currentLIAMonthLabel = found[0].label; currentLIAMonthVal = found[0].value; }
+        
         if (!currentLIAMonthVal) {
-            const active = localStorage.getItem('clarusActiveMonth') || '2026-07';
-            currentLIAMonthVal = active; currentLIAMonthLabel = active.includes('07') ? 'Julho 2026' : 'Período Atual';
+            currentLIAMonthVal = localStorage.getItem('clarusActiveMonth') || new Date().toISOString().substring(0, 7);
+            const [y, m] = currentLIAMonthVal.split('-');
+            const months = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+            currentLIAMonthLabel = `${months[parseInt(m)-1]} ${y}`;
         }
+
         const userId = localStorage.getItem('clarusSessionId');
-        const raw = localStorage.getItem(`clarusData_${userId}_${currentLIAMonthVal}`);
-        const data = raw ? JSON.parse(raw) : (window.clarusDataLevel1 || {});
+        
+        // --- DEEP CONTEXT GATHERING ---
+        // 1. DRE Data
+        const dreRaw = localStorage.getItem(`clarusData_${userId}_${currentLIAMonthVal}`);
+        const dreData = dreRaw ? JSON.parse(dreRaw) : {};
+        
+        // 2. Fluxo/Bank Data
+        const fluxRaw = localStorage.getItem(`clarusDataVenc_${userId}_${currentLIAMonthVal}`);
+        const fluxData = fluxRaw ? JSON.parse(fluxRaw) : {};
+
+        // 3. User Info (Banks, Loans)
+        const companies = JSON.parse(localStorage.getItem('clarusCompanies') || '[]');
+        const userProfile = companies.find(c => c.id === userId) || {};
+
+        const fullContext = {
+            periodo: currentLIAMonthLabel,
+            faturamento: dreData.receita_total || 0,
+            lucro_liquido: dreData.lucro_liquido || 0,
+            impostos: dreData.impostos || 0,
+            custos: dreData.custos || 0,
+            despesas_op: dreData.despesas_operacionais || 0,
+            contas_bancarias: userProfile.banks || [],
+            movimentacao_bancos: fluxData.bancos || {},
+            emprestimos: userProfile.loans || [],
+            estoque: dreData.estoque_unidades || {}
+        };
+
+        // Update system instructions for actions
+        const actionPrompt = `
+IMPORTANTE: Você pode realizar ações no sistema usando blocos especiais de comando no final da sua resposta:
+[ACTION:OPEN_VIEW|target-name] - Trocar para uma tela (saude-financeira, fluxo-caixa, bancos, emprestimos, comercial, estoque, crescimento, indicadores, balanco-gerencial)
+[ACTION:DOWNLOAD_PDF] - Gerar relatório PDF do mês atual
+[ACTION:REFRESH_DATA] - Sincronizar dados com o Supabase/Nuvem
+Exemplo: "Vou te levar para o módulo de Bancos. [ACTION:OPEN_VIEW|bancos]"`;
 
         // 1. Try Gemini
-        const geminiRes = await callGemini(query, data, currentLIAMonthLabel);
+        const geminiRes = await callGemini(query, fullContext, currentLIAMonthLabel + "\n\n" + actionPrompt);
+        
         if (geminiRes) {
             let res = geminiRes.replace(/\*\*/g, '<strong>').replace(/\*\*/g, '</strong>').replace(/\n/g, '<br>');
-            if (text.match(/relatório|baixar|pdf|exportar|dre/)) {
-                res += `<br><br><button onclick="window.downloadLIAForPeriod('${currentLIAMonthVal}', '${currentLIAMonthLabel}')" class="btn-primary" style="padding:10px; font-size:0.8rem; width:100%; cursor:pointer; background:var(--accent-gold); color:#000; border:none; border-radius:8px; font-weight:700;"><i class="fa-solid fa-file-pdf"></i> Download PDF de ${currentLIAMonthLabel}</button>`;
+            
+            // --- ACTION PARSER ---
+            if (res.includes('[ACTION:OPEN_VIEW|')) {
+                const match = res.match(/\[ACTION:OPEN_VIEW\|([^\]]+)\]/);
+                if (match && match[1]) {
+                    const viewId = match[1].trim();
+                    console.log("LIA: Executando troca de vista para", viewId);
+                    const navLink = document.querySelector(`.nav-item[data-target="${viewId}"]`);
+                    if (navLink) {
+                        setTimeout(() => navLink.click(), 1000);
+                        res = res.replace(match[0], '<span style="color:var(--accent-gold); font-size:0.75rem; display:block; margin-top:5px;"><i class="fa-solid fa-person-walking-arrow-right"></i> Navegando para ' + viewId + '...</span>');
+                    } else {
+                        res = res.replace(match[0], '');
+                    }
+                }
             }
+
+            if (res.includes('[ACTION:DOWNLOAD_PDF]')) {
+                const match = res.match(/\[ACTION:DOWNLOAD_PDF\]/);
+                console.log("LIA: Executando download de PDF");
+                setTimeout(() => window.downloadLIAForPeriod(currentLIAMonthVal, currentLIAMonthLabel), 1500);
+                res = res.replace(match[0], '<span style="color:var(--accent-gold); font-size:0.75rem; display:block; margin-top:5px;"><i class="fa-solid fa-spinner fa-spin"></i> Preparando Relatório PDF...</span>');
+            }
+
+            if (res.includes('[ACTION:REFRESH_DATA]')) {
+                const match = res.match(/\[ACTION:REFRESH_DATA\]/);
+                console.log("LIA: Executando Sincronização");
+                if (window.syncCloudToLocal) setTimeout(() => window.syncCloudToLocal(), 500);
+                res = res.replace(match[0], '<span style="color:var(--accent-gold); font-size:0.75rem; display:block; margin-top:5px;"><i class="fa-solid fa-cloud-arrow-down"></i> Sincronizando com a Nuvem...</span>');
+            }
+
             return res;
         }
 
-        // 2. Fallback Local Logic 
+        // 2. Fallback Local Logic (Simplified now that Gemini is prioritized)
         let res = `Para <strong>${currentLIAMonthLabel}</strong>, analisei seus dados: <br><br>`;
-        const margemPct = ((data.lucro_liquido / (data.receita_total || 1)) * 100).toFixed(1);
-
-        if (text.includes('%') || text.includes('porcentagem') || text.includes('margem')) {
-            res += `O seu lucro de <strong>${formatBRL(data.lucro_liquido)}</strong> representa uma margem líquida de <strong>${margemPct}%</strong> sobre o faturamento total.`;
-        } else if (text.includes('despesa') || text.includes('gasto') || text.includes('custo')) {
-            const totalD = (data.despesas_operacionais || 0) + (data.custos || 0) + (data.impostos || 0);
-            res += `Suas despesas totais somaram <strong>${formatBRL(totalD)}</strong>. <br>Sendo: <br>• Custos: ${formatBRL(data.custos)} <br>• Despesas: ${formatBRL(data.despesas_operacionais)}`;
-        } else {
-            res += `Seu faturamento foi de <strong>${formatBRL(data.receita_total)}</strong> e o lucro de <strong>${formatBRL(data.lucro_liquido)}</strong>. (Atenção: Houve um problema na conexão com o Gemini, operando em modo local).`;
-        }
-
+        res += `Seu faturamento foi de <strong>${formatBRL(fullContext.faturamento)}</strong> e o lucro de <strong>${formatBRL(fullContext.lucro_liquido)}</strong>.`;
         res += `<br><br><button onclick="window.downloadLIAForPeriod('${currentLIAMonthVal}', '${currentLIAMonthLabel}')" class="btn-primary" style="padding:10px; font-size:0.8rem; width:100%; cursor:pointer; background:var(--accent-gold); color:#000; border:none; border-radius:8px; font-weight:700;"><i class="fa-solid fa-file-pdf"></i> Download PDF de ${currentLIAMonthLabel}</button>`;
         return res;
     };

@@ -1,3 +1,7 @@
+html {
+    font-size: 12px; /* Equivale a 75% do padrão de 16px, reduzindo a interface inteira perfeitamente */
+}
+
 :root {
     --bg-dark: #0f172a;
     --bg-card: #1e293b;
@@ -216,7 +220,6 @@ body {
     background-color: var(--bg-dark);
     color: var(--text-primary);
     overflow: hidden;
-    zoom: 0.75;
 }
 
 /* GRID DE INDICADORES - COMPACTO E MULTI-COLUNA */
@@ -230,7 +233,7 @@ body {
 /* Ajuste nos cards para serem mais compactos */
 .indicator-card {
     padding: 1rem !important;
-    min-height: 120px;
+    min-height: 7.5rem;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
@@ -346,7 +349,7 @@ body.light-theme .theme-toggle-btn i::before {
     padding: 3rem;
     border-radius: var(--border-radius-lg);
     width: 100%;
-    max-width: 420px;
+    max-width: 26.25rem; /* 420px */
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
     z-index: 2;
     transform: translateY(20px);
@@ -393,7 +396,7 @@ body.light-theme .theme-toggle-btn i::before {
 }
 
 .app-logo {
-    max-width: 220px;
+    max-width: 13.75rem; /* 220px */
     height: auto;
     display: block;
     margin: 0 auto;
@@ -465,7 +468,7 @@ body.light-theme .theme-toggle-btn i::before {
 
 /* Sidebar */
 .sidebar {
-    width: 280px;
+    width: 17.5rem; /* 280px */
     background-color: var(--bg-card);
     height: 100vh;
     border-right: 1px solid var(--border-color);
@@ -475,7 +478,7 @@ body.light-theme .theme-toggle-btn i::before {
 }
 
 .sidebar-header {
-    height: 90px;
+    height: 5.625rem; /* 90px */
     display: flex;
     align-items: center;
     justify-content: center;
@@ -484,7 +487,7 @@ body.light-theme .theme-toggle-btn i::before {
 }
 
 .topbar {
-    height: 70px;
+    height: 4.375rem; /* 70px */
     background: #1e293b;
     /* Fixed Dark Topbar for contrast if needed, or variable */
     display: flex;
@@ -513,7 +516,7 @@ body.light-theme .topbar .page-title h2 {
 }
 
 .sidebar-logo .app-logo {
-    max-width: 140px;
+    max-width: 8.75rem; /* 140px */
 }
 
 .sidebar-header h2 {

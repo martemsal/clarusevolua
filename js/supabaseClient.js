@@ -7,16 +7,23 @@
 const SUPABASE_URL = 'https://lfnnxuoqmzvxzlzesvkk.supabase.co'; 
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxmbm54dW9xbXp2eHpsemVzdmtrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc2MjYzNDQsImV4cCI6MjA5MzIwMjM0NH0.BwYMSA9h6faAMW3hmo50ta5Ev9dwGBY0Y_7z-dkDFCY';
 
+// Inicializa a interface global imediatamente para evitar erros de "undefined" em outros scripts
+window.db = {};
+
 // Inicializa o cliente do Supabase
-// (A biblioteca deve ser incluída no index.html via CDN)
 let supabase;
-if (window.supabase) {
-    supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-} else {
-    console.error("Supabase CDN não foi carregada no index.html!");
+try {
+    if (window.supabase) {
+        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        console.log("✅ [Supabase] Cliente inicializado.");
+    } else {
+        console.error("❌ [Supabase] CDN não foi carregada no index.html!");
+    }
+} catch (e) {
+    console.error("❌ [Supabase] Erro crítico na inicialização:", e);
 }
 
-window.db = {
+Object.assign(window.db, {
     // --- GESTÃO DE CLIENTES (COMPANIES) ---
     async getCompanies() {
         if (!supabase) return [];
@@ -152,4 +159,4 @@ window.db = {
         if (error) console.error("Erro ao enviar notificação:", error);
         return !error;
     }
-};
+});

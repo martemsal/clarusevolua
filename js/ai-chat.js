@@ -50,16 +50,19 @@ document.addEventListener('DOMContentLoaded', () => {
         Instruções Adicionais: ${instructions}
         Responda de forma estratégica e sugira ações práticas.`;
 
-        const models = ['gemini-1.5-flash', 'gemini-1.5-flash-latest', 'gemini-pro', 'gemini-1.0-pro'];
+        // Tenta vários modelos possíveis para garantir compatibilidade
+        const models = ['gemini-flash-latest', 'gemini-1.5-flash', 'gemini-pro'];
         let lastError = null;
 
         for (const modelName of models) {
             try {
-                // Tenta v1beta depois v1 para cada modelo
                 for (const ver of ['v1beta', 'v1']) {
-                    const response = await fetch(`https://generativelanguage.googleapis.com/${ver}/models/${modelName}:generateContent?key=${apiKey}`, {
+                    const response = await fetch(`https://generativelanguage.googleapis.com/${ver}/models/${modelName}:generateContent`, {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers: { 
+                            'Content-Type': 'application/json',
+                            'X-goog-api-key': apiKey 
+                        },
                         body: JSON.stringify({
                             contents: [{ parts: [{ text: `${systemPrompt}\n\nUsuário pergunta: ${userMessage}` }] }]
                         })

@@ -233,11 +233,14 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
-        // Footer
+        // Footer with Version Stamp (to verify cache update)
         doc.setFontSize(7);
         doc.setTextColor(148, 163, 184);
+        const timestamp = new Date().toLocaleString('pt-BR');
+        doc.text(`Diagnóstico LIA v2.0 - Gerado em ${timestamp}`, 105, 280, { align: "center" });
         doc.text(`Este documento é uma análise gerencial gerada por Inteligência Artificial e não substitui a contabilidade oficial.`, 105, 285, { align: "center" });
 
+        console.log("PDF Gerado com sucesso. Versão 2.0. Texto de análise:", analysisText ? "Sim" : "Não");
         doc.save(`Relatorio_LIA_${monthLabel.replace(' ', '_')}.pdf`);
     };
 

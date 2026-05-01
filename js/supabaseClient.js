@@ -19,36 +19,42 @@ if (window.supabase) {
 window.db = {
     // --- GESTÃO DE CLIENTES (COMPANIES) ---
     async getCompanies() {
+        if (!supabase) return [];
         const { data, error } = await supabase
             .from('companies')
             .select('*');
         if (error) {
-            console.error("Erro ao buscar empresas:", error);
+            console.error("❌ [Supabase] Erro ao buscar empresas:", error);
             return [];
         }
         return data || [];
     },
 
     async saveCompany(comp) {
+        if (!supabase) return { success: false, error: "Supabase client not initialized" };
         console.log("📤 [Supabase] Tentando salvar empresa:", comp.id);
+        
+        // Sanitização e Preparação
+        const payload = {
+            id: String(comp.id),
+            name: String(comp.name),
+            password: String(comp.password || ""),
+            level: parseInt(comp.level) || 1,
+            capital_social: parseFloat(comp.capitalSocial) || 0,
+            modules: Array.isArray(comp.modules) ? comp.modules : [],
+            banks: Array.isArray(comp.banks) ? comp.banks : [],
+            files: Array.isArray(comp.files) ? comp.files : []
+        };
+
         const { data, error } = await supabase
             .from('companies')
-            .upsert({
-                id: comp.id,
-                name: comp.name,
-                password: comp.password,
-                level: comp.level,
-                capital_social: comp.capitalSocial || 0,
-                modules: comp.modules || [],
-                banks: comp.banks || [],
-                files: comp.files || []
-            }, { onConflict: 'id' });
+            .upsert(payload, { onConflict: 'id' });
             
         if (error) {
-            console.error("❌ [Supabase] Erro ao salvar empresa:", error);
-            return { success: false, error: error.message };
+            console.error("❌ [Supabase] Erro detalhado no upsert:", error);
+            return { success: false, error: error.message || JSON.stringify(error) };
         }
-        console.log("✅ [Supabase] Empresa salva com sucesso:", comp.id);
+        console.log("✅ [Supabase] Empresa sincronizada com sucesso.");
         return { success: true };
     },
 

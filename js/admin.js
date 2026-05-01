@@ -14,16 +14,26 @@ const parseBRL = (s) => {
 // Admin Panel Logic - Unified
 // Removendo dados mockados locais para usar apenas Supabase conforme pedido do USER
 const defaultCompanies = [];
+let mockCompanies = []; // Source of truth
 
 // Configure PDF.js Worker
 if (typeof pdfjsLib !== 'undefined') {
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 }
 
-let mockCompanies = JSON.parse(localStorage.getItem('clarusCompanies') || '[]');
+const APP_VERSION = "1.9.2";
 
-// FORCED PATCH: State Fix
-const APP_VERSION = "1.9.1";
+// UI Elements for Status
+const statusDot = document.getElementById('status-dot');
+const statusText = document.getElementById('status-text');
+
+const updateSupabaseStatus = (connected, msg) => {
+    if (!statusDot || !statusText) return;
+    statusDot.style.background = connected ? "#10b981" : "#ef4444";
+    statusText.innerText = `Supabase: ${msg || (connected ? "Conectado" : "Erro")}`;
+    statusText.style.color = connected ? "#10b981" : "#ef4444";
+};
+
 if (localStorage.getItem('clarusAppVersion') !== APP_VERSION) {
     localStorage.setItem('clarusAppVersion', APP_VERSION);
     console.log("🚀 [System] Versão v" + APP_VERSION + " aplicada.");
@@ -32,14 +42,18 @@ if (localStorage.getItem('clarusAppVersion') !== APP_VERSION) {
 const saveAdminData = async () => {
     localStorage.setItem('clarusCompanies', JSON.stringify(mockCompanies));
     
-    // SUPABASE SYNC UP
+    // SUPABASE SYNC
     if (window.db && window.db.saveCompany) {
         if (editingCompanyId) {
             const comp = mockCompanies.find(c => c.id === editingCompanyId);
             if (comp) {
                 const result = await window.db.saveCompany(comp);
                 if (!result.success) {
-                    alert("⚠️ Erro de Sincronização Cloud: " + result.error + "\n\nO cliente foi salvo localmente, mas não no Supabase. Verifique se as colunas da tabela coincidem com o código.");
+                    console.error("❌ Erro ao salvar no Supabase:", result.error);
+                    alert("⚠️ ALERTA DE SINCRONIZAÇÃO:\n\nOs dados foram salvos no seu navegador, mas NÃO foram enviados para o Supabase.\n\nMotivo: " + result.error + "\n\nVerifique se você executou o script SQL no Supabase para criar as permissões (RLS).");
+                } else {
+                    console.log("✅ Sincronizado com Supabase com sucesso.");
+                    updateSupabaseStatus(true, "Sincronizado");
                 }
             }
         } else {
@@ -81,8 +95,7 @@ const renderAdminCompanies = () => {
         card.innerHTML = `
             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
                 <h3 style="font-size: 1.1rem; margin: 0;">${comp.name}</h3>
-                <div style="color: var(--text-secondary); font-size: 0.8rem; font-fami
-ly: monospace;">ID: ${comp.id}</div>
+                <div style="color: var(--text-secondary); font-size: 0.8rem; font-family: monospace;">ID: ${comp.id}</div>
             </div>
             <div style="margin-bottom: 1rem;">
                 ${getLevelBadge(comp.level)}
@@ -155,19 +168,29 @@ ly: monospace;">ID: ${comp.id}</div>
 window.initAdminPanel = async () => {
     // Sincronização inicial forçada antes de renderizar
     if (window.db && window.db.getCompanies) {
+        updateSupabaseStatus(false, "Sincronizando...");
         console.log("🔄 [Admin] Buscando clientes atualizados do Supabase...");
         const cloudCompanies = await window.db.getCompanies();
-        mockCompanies = cloudCompanies.map(c => ({
-            id: c.id,
-            name: c.name,
-            password: c.password,
-            level: c.level,
-            capitalSocial: c.capital_social,
-            modules: c.modules || [],
-            banks: c.banks || [],
-            files: c.files || []
-        }));
-        localStorage.setItem('clarusCompanies', JSON.stringify(mockCompanies));
+        if (cloudCompanies) {
+            updateSupabaseStatus(true, "Conectado");
+            mockCompanies = cloudCompanies.map(c => ({
+                id: c.id,
+                name: c.name,
+                password: c.password,
+                level: c.level,
+                capitalSocial: c.capital_social,
+                modules: c.modules || [],
+                banks: c.banks || [],
+                files: c.files || []
+            }));
+            localStorage.setItem('clarusCompanies', JSON.stringify(mockCompanies));
+        } else {
+            updateSupabaseStatus(false, "Erro na Busca");
+            mockCompanies = JSON.parse(localStorage.getItem('clarusCompanies') || '[]');
+        }
+    } else {
+        updateSupabaseStatus(false, "DB não carregado");
+        mockCompanies = JSON.parse(localStorage.getItem('clarusCompanies') || '[]');
     }
     renderAdminCompanies();
 };

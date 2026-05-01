@@ -216,6 +216,7 @@ body {
     background-color: var(--bg-dark);
     color: var(--text-primary);
     overflow: hidden;
+    zoom: 0.75;
 }
 
 /* GRID DE INDICADORES - COMPACTO E MULTI-COLUNA */

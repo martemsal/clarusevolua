@@ -1,7 +1,5 @@
 html {
-    zoom: 0.8;
-    -moz-transform: scale(0.8);
-    -moz-transform-origin: 0 0;
+    font-size: 11.5px; /* Ajuste fino para escala de dashboard profissional */
 }
 
 :root {
@@ -221,7 +219,8 @@ body {
     font-family: var(--font-family);
     background-color: var(--bg-dark);
     color: var(--text-primary);
-    overflow: hidden;
+    overflow-x: hidden;
+    overflow-y: auto;
 }
 
 /* GRID DE INDICADORES - COMPACTO E MULTI-COLUNA */
@@ -269,18 +268,18 @@ body {
 
 /* Screens */
 .screen {
-    width: 100vw;
-    height: 100vh;
+    width: 100%;
+    min-height: 100vh;
     opacity: 0;
     transition: opacity 0.5s ease;
-    position: absolute;
-    top: 0;
-    left: 0;
+    position: relative;
+    display: none;
 }
 
 .screen.view-active {
     opacity: 1;
     z-index: 10;
+    display: flex;
 }
 
 .theme-toggle-btn {
@@ -470,13 +469,14 @@ body.light-theme .theme-toggle-btn i::before {
 
 /* Sidebar */
 .sidebar {
-    width: 17.5rem; /* 280px */
+    width: 17rem;
     background-color: var(--bg-card);
-    height: 100vh;
+    min-height: 100vh;
     border-right: 1px solid var(--border-color);
     display: flex;
     flex-direction: column;
     z-index: 20;
+    flex-shrink: 0;
 }
 
 .sidebar-header {
@@ -641,8 +641,9 @@ body.light-theme .topbar .page-title h2 {
     flex: 1;
     display: flex;
     flex-direction: column;
-    height: 100vh;
+    min-height: 100vh;
     background-color: var(--bg-dark);
+    min-width: 0;
 }
 
 /* Topbar */

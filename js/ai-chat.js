@@ -133,27 +133,31 @@ document.addEventListener('DOMContentLoaded', () => {
         doc.setLineWidth(1);
         doc.line(15, 60, 100, 60);
 
-        // 3. AI Analysis Section (RECOVERED)
+        // 3. AI Analysis Section (FORMATTED)
         let y = 70;
         if (analysisText && analysisText.length > 5) {
             doc.setFontSize(14);
             doc.setTextColor(...primaryColor);
             doc.text("Parecer Técnico da Consultoria", 15, y);
-            y += 10;
+            y += 12;
 
-            // SIMPLE CLEANING - Keep it reliable
-            const finalCleanText = analysisText
+            // ADVANCED FORMATTING
+            let formattedText = analysisText
                 .replace(/<[^>]*>/g, '') // Remove HTML
                 .replace(/\[ACTION:.*?\]/g, '') // Remove Actions
                 .replace(/BAIXAR RELATÓRIO PDF COMPLETO/g, '')
                 .replace(/Preparando Relatório PDF\.\.\./g, '')
+                .replace(/###\s*(.*?)\n/g, '\n\n$1\n') // Header spacing
+                .replace(/###/g, '\n\n') // Fallback headers
+                .replace(/\*\s/g, '\n  • ') // Bullets
+                .replace(/\*\*/g, '') // Bold marks
                 .trim();
             
             doc.setFont("helvetica", "normal");
             doc.setFontSize(10);
-            doc.setTextColor(...primaryColor); // High contrast
+            doc.setTextColor(...primaryColor);
             
-            const lines = doc.splitTextToSize(finalCleanText, 175);
+            const lines = doc.splitTextToSize(formattedText, 175);
             
             // Left accent line
             doc.setDrawColor(accentColor[0], accentColor[1], accentColor[2]);
@@ -161,7 +165,7 @@ document.addEventListener('DOMContentLoaded', () => {
             doc.line(12, y, 12, y + (lines.length * 5.2));
 
             doc.text(lines, 15, y);
-            y += (lines.length * 5.2) + 20;
+            y += (lines.length * 5.2) + 25;
         }
 
         // FORCE PAGE BREAK IF SPACE IS TIGHT

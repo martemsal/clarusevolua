@@ -355,34 +355,31 @@ Exemplo: "Vou te levar para o módulo de Bancos. [ACTION:OPEN_VIEW|bancos]"`;
                 setTimeout(() => window.downloadLIAForPeriod(currentLIAMonthVal, currentLIAMonthLabel), 1500);
                 res = res.replace(match[0], '<span style="color:var(--accent-gold); font-size:0.75rem; display:block; margin-top:5px;"><i class="fa-solid fa-spinner fa-spin"></i> Preparando Relatório PDF...</span>');
             }
-
             if (res.includes('[ACTION:REFRESH_DATA]')) {
                 const match = res.match(/\[ACTION:REFRESH_DATA\]/);
                 if (window.syncCloudToLocal) setTimeout(() => window.syncCloudToLocal(), 500);
                 res = res.replace(match[0], '<span style="color:var(--accent-gold); font-size:0.75rem; display:block; margin-top:5px;"><i class="fa-solid fa-cloud-arrow-down"></i> Sincronizando com a Nuvem...</span>');
             }
-
             return res;
         }
 
         // 2. Fallback Local Logic with Error Context
-        let res = `Para <strong>${currentLIAMonthLabel}</strong>, analisei seus dados localmente: <br><br>`;
+        let res = `Analisando seus dados localmente para <strong>${currentLIAMonthLabel}</strong>: <br><br>`;
         res += `Seu faturamento foi de <strong>${formatBRL(fullContext.faturamento)}</strong> e o lucro de <strong>${formatBRL(fullContext.lucro_liquido)}</strong>.`;
         
         const apiKey = localStorage.getItem('clarusGeminiKey');
         if (!apiKey) {
             res += `<br><br><div style="background:rgba(239,68,68,0.1); border:1px solid #ef4444; padding:10px; border-radius:8px; font-size:0.75rem; color:#fca5a5;">
-                <i class="fa-solid fa-key"></i> <strong>Chave Gemini não detectada.</strong><br>
-                Vá em Painel Admin > Configurações Globais e salve sua API Key para ativar a inteligência avançada.
+                <i class="fa-solid fa-key"></i> <strong>Configuração Pendente:</strong><br>
+                Sua chave de inteligência não foi encontrada. Salve-a no Painel Admin para ativar a análise estratégica.
             </div>`;
-        } else if (geminiError || !geminiRes) {
+        } else if (geminiError) {
+            console.error("LIA Fallback Error:", geminiError);
             res += `<br><br><div style="background:rgba(239,68,68,0.1); border:1px solid #ef4444; padding:10px; border-radius:8px; font-size:0.75rem; color:#fca5a5;">
-                <i class="fa-solid fa-circle-exclamation"></i> <strong>Erro de Conexão:</strong><br>
-                ${geminiError || 'Não foi possível obter resposta da Google AI Studio. Verifique se sua chave é válida ou se o modelo Gemini 1.5 Flash está disponível na sua região.'}
+                <i class="fa-solid fa-triangle-exclamation"></i> <strong>Instabilidade Temporária:</strong><br>
+                Não consegui conectar com os servidores do Google agora. Vou gerar o relatório com base nos dados locais.
             </div>`;
         }
-
-        res += `<br><br><button onclick="window.downloadLIAForPeriod('${currentLIAMonthVal}', '${currentLIAMonthLabel}')" class="btn-primary" style="padding:10px; font-size:0.8rem; width:100%; cursor:pointer; background:var(--accent-gold); color:#000; border:none; border-radius:8px; font-weight:700;"><i class="fa-solid fa-file-pdf"></i> Download PDF de ${currentLIAMonthLabel}</button>`;
         return res;
     };
 

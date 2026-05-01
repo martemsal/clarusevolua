@@ -50,26 +50,29 @@ document.addEventListener('DOMContentLoaded', () => {
         Instruções Adicionais: ${instructions}
         Responda de forma estratégica e sugira ações práticas.`;
 
-        const models = ['gemini-1.5-flash', 'gemini-pro'];
+        const models = ['gemini-1.5-flash', 'gemini-1.5-flash-latest', 'gemini-pro', 'gemini-1.0-pro'];
         let lastError = null;
 
         for (const modelName of models) {
             try {
-                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        contents: [{ parts: [{ text: `${systemPrompt}\n\nUsuário pergunta: ${userMessage}` }] }]
-                    })
-                });
+                // Tenta v1beta depois v1 para cada modelo
+                for (const ver of ['v1beta', 'v1']) {
+                    const response = await fetch(`https://generativelanguage.googleapis.com/${ver}/models/${modelName}:generateContent?key=${apiKey}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            contents: [{ parts: [{ text: `${systemPrompt}\n\nUsuário pergunta: ${userMessage}` }] }]
+                        })
+                    });
 
-                if (response.ok) {
-                    const data = await response.json();
-                    return data.candidates?.[0]?.content?.parts?.[0]?.text || "Não consegui processar agora.";
-                } else {
-                    const errData = await response.json().catch(() => ({}));
-                    lastError = `Google API (${response.status}): ${errData.error?.message || response.statusText}`;
-                    console.warn(`LIA: Tentativa com ${modelName} falhou, tentando próximo...`);
+                    if (response.ok) {
+                        const data = await response.json();
+                        return data.candidates?.[0]?.content?.parts?.[0]?.text || "Não consegui processar agora.";
+                    } else {
+                        const errData = await response.json().catch(() => ({}));
+                        lastError = `Google API (${ver}/${modelName}): ${errData.error?.message || response.statusText}`;
+                        console.warn(`LIA: Tentativa com ${ver}/${modelName} falhou...`);
+                    }
                 }
             } catch (e) {
                 lastError = e.message;

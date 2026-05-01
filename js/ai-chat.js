@@ -360,14 +360,6 @@ Exemplo: "Vou te levar para o módulo de Bancos. [ACTION:OPEN_VIEW|bancos]"`;
         return res;
     };
 
-    const addMessage = (text, sender) => {
-        const msgDiv = document.createElement('div');
-        msgDiv.className = `chat-message ${sender}`;
-        msgDiv.innerHTML = text;
-        messagesBox.appendChild(msgDiv);
-        messagesBox.scrollTop = messagesBox.scrollHeight;
-    };
-
     const processUserInput = async (text) => {
         if (!text.trim()) return;
         addMessage(text, 'user');

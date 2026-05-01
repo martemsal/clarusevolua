@@ -87,30 +87,116 @@ document.addEventListener('DOMContentLoaded', () => {
     const generatePDFReport = async (data, monthLabel) => {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
+        const primaryColor = [15, 23, 42]; // Slate 900
+        const accentColor = [251, 191, 36]; // Gold
+
+        // 1. Header with Logo
         try {
-            const logo = new Image(); logo.src = 'img/logo.png';
+            const logo = new Image();
+            const globalSettings = JSON.parse(localStorage.getItem('clarusGlobalSettings') || '{}');
+            logo.src = globalSettings.logoPath || 'img/logo.png';
             await new Promise((r) => logo.onload = r);
-            doc.setFillColor(15, 23, 42); doc.rect(0, 0, 210, 40, 'F');
-            doc.addImage(logo, 'PNG', 20, 5, 60, 25);
-        } catch (e) { doc.setFillColor(15, 23, 42); doc.rect(0, 0, 210, 40, 'F'); }
-        doc.setTextColor(0, 0, 0); doc.setFontSize(18);
-        doc.text(`Relatório DRE ${monthLabel}`, 20, 55);
-        doc.setFontSize(12); let y = 75;
-        const addR = (l, v, b = false) => {
-            if (b) doc.setFont("helvetica", "bold");
-            doc.text(l, 20, y); doc.text(formatBRL(v), 190, y, { align: "right" });
-            y += 8; doc.setFont("helvetica", "normal");
-        };
-        addR("Receita Total", data.receita_total, true);
-        addR("(=) Margem Contribuição", data.receita_total - data.custos - data.impostos, true);
-        addR("LUCRO LÍQUIDO", data.lucro_liquido, true);
+            doc.setFillColor(...primaryColor);
+            doc.rect(0, 0, 210, 40, 'F');
+            doc.addImage(logo, 'PNG', 15, 7, 50, 25);
+        } catch (e) {
+            doc.setFillColor(...primaryColor);
+            doc.rect(0, 0, 210, 40, 'F');
+        }
+
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(10);
+        doc.text("CLARUS EVOLUA - Inteligência Estratégica", 195, 20, { align: "right" });
+        doc.text(monthLabel, 195, 28, { align: "right" });
+
+        // 2. Report Title
+        doc.setTextColor(...primaryColor);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(22);
+        doc.text("Relatório de Performance Financeira", 15, 60);
+        
+        doc.setDrawColor(...accentColor);
+        doc.setLineWidth(1);
+        doc.line(15, 65, 100, 65);
+
+        // 3. Key Metrics Section
+        let y = 80;
+        doc.setFontSize(14);
+        doc.text("Indicadores de Desempenho", 15, y);
+        y += 10;
+
+        const metrics = [
+            { label: "Receita Total", value: formatBRL(data.receita_total || 0) },
+            { label: "Lucro Líquido", value: formatBRL(data.lucro_liquido || 0) },
+            { label: "Margem de Lucro", value: `${data.margem_lucro || 0}%` },
+            { label: "EBITDA", value: formatBRL(data.ebitda || 0) }
+        ];
+
+        metrics.forEach((m, i) => {
+            doc.setFillColor(248, 250, 252);
+            doc.rect(15 + (i % 2) * 90, y, 85, 20, 'F');
+            doc.setFontSize(9);
+            doc.setTextColor(100, 116, 139);
+            doc.text(m.label, 20 + (i % 2) * 90, y + 7);
+            doc.setFontSize(11);
+            doc.setTextColor(...primaryColor);
+            doc.text(m.value, 20 + (i % 2) * 90, y + 15);
+            if (i === 1) y += 25;
+        });
+
+        // 4. DRE Table
+        y += 10;
+        doc.setFontSize(14);
+        doc.text("Demonstrativo de Resultados (DRE)", 15, y);
+        y += 10;
+
+        const tableHeader = ["Categoria", "Valor"];
+        doc.setFillColor(...primaryColor);
+        doc.rect(15, y, 180, 10, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(10);
+        doc.text(tableHeader[0], 20, y + 7);
+        doc.text(tableHeader[1], 190, y + 7, { align: "right" });
+        y += 10;
+
+        const rows = [
+            { l: "Receita Bruta", v: data.receita_total || 0 },
+            { l: "(-) Impostos", v: data.impostos || 0 },
+            { l: "Receita Líquida", v: (data.receita_total || 0) - (data.impostos || 0), b: true },
+            { l: "(-) Custos", v: data.custos || 0 },
+            { l: "Margem de Contribuição", v: (data.receita_total || 0) - (data.impostos || 0) - (data.custos || 0), b: true },
+            { l: "(-) Despesas Operacionais", v: data.despesas_operacionais || 0 },
+            { l: "LUCRO LÍQUIDO", v: data.lucro_liquido || 0, b: true, highlight: true }
+        ];
+
+        rows.forEach((r, i) => {
+            if (r.highlight) doc.setFillColor(254, 243, 199);
+            else if (i % 2 === 0) doc.setFillColor(241, 245, 249);
+            else doc.setFillColor(255, 255, 255);
+            
+            doc.rect(15, y, 180, 8, 'F');
+            doc.setTextColor(0, 0, 0);
+            if (r.b) doc.setFont("helvetica", "bold");
+            else doc.setFont("helvetica", "normal");
+            
+            doc.text(r.l, 20, y + 5.5);
+            doc.text(formatBRL(r.v), 190, y + 5.5, { align: "right" });
+            y += 8;
+        });
+
+        // 5. Footer
+        doc.setFontSize(8);
+        doc.setTextColor(148, 163, 184);
+        doc.text(`Gerado por LIA - Assistente de IA Clarus Evolua em ${new Date().toLocaleDateString()}`, 105, 285, { align: "center" });
+
         doc.save(`Relatorio_LIA_${monthLabel.replace(' ', '_')}.pdf`);
     };
 
-    window.downloadLIAForPeriod = (mVal, mLabel) => {
+    window.downloadLIAForPeriod = (val, label) => {
         const userId = localStorage.getItem('clarusSessionId');
-        const raw = localStorage.getItem(`clarusData_${userId}_${mVal}`);
-        if (raw) generatePDFReport(JSON.parse(raw), mLabel);
+        const raw = localStorage.getItem(`clarusData_${userId}_${val}`);
+        if (raw) generatePDFReport(JSON.parse(raw), label);
+        else alert("Dados não encontrados para este período.");
     };
 
     const generateResponse = async (query) => {

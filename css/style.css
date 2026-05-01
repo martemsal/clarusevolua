@@ -583,8 +583,8 @@ body.light-theme .topbar .page-title h2 {
 }
 
 .company-avatar {
-    width: 40px;
-    height: 40px;
+    width: 2.5rem; /* 40px */
+    height: 2.5rem; /* 40px */
     border-radius: 8px;
     background: linear-gradient(135deg, var(--bg-card-hover), var(--bg-dark));
     display: flex;
@@ -644,7 +644,7 @@ body.light-theme .topbar .page-title h2 {
 
 /* Topbar */
 .topbar {
-    height: 80px;
+    height: 5rem; /* 80px */
     background: #1e293b;
     border-bottom: 1px solid var(--border-color);
     display: flex;
@@ -712,8 +712,8 @@ body.light-theme .page-title p {
 }
 
 .btn-icon {
-    width: 40px;
-    height: 40px;
+    width: 2.5rem; /* 40px */
+    height: 2.5rem; /* 40px */
     border-radius: 50%;
     background: var(--bg-card);
     border: 1px solid var(--border-color);
@@ -789,7 +789,7 @@ body.light-theme .page-title p {
     position: absolute;
     top: 50px;
     right: -10px;
-    width: 320px;
+    width: 20rem; /* 320px */
     background: var(--bg-card);
     border: 1px solid var(--border-color);
     border-radius: var(--border-radius-md);

@@ -85,6 +85,18 @@ if (localStorage.getItem('clarusAppVersion') !== APP_VERSION) {
 
 const saveAdminData = () => {
     localStorage.setItem('clarusCompanies', JSON.stringify(mockCompanies));
+    
+    // SUPABASE SYNC UP
+    if (window.db && window.db.saveCompany) {
+        if (editingCompanyId) {
+            const comp = mockCompanies.find(c => c.id === editingCompanyId);
+            if (comp) window.db.saveCompany(comp).catch(e => console.error("Sync Error:", e));
+        } else {
+            mockCompanies.forEach(comp => {
+                window.db.saveCompany(comp).catch(e => console.error("Sync Error:", e));
+            });
+        }
+    }
 };
 
 let editingCompanyId = null;
@@ -481,6 +493,13 @@ const renderFilesList = (files) => {
 
                                 delete d._contributions[fileNameToDelete];
                                 localStorage.setItem(k, JSON.stringify(d));
+
+                                // SUPABASE SYNC UP
+                                if (window.db && window.db.saveFinancialData) {
+                                    const typeStr = k.startsWith('clarusData_') ? 'dre' : 'fluxo';
+                                    const mKey = k.split('_').pop();
+                                    window.db.saveFinancialData(editingCompanyId, mKey, typeStr, d).catch(e => console.error("Sync Error:", e));
+                                }
                             }
                         }
                     }
@@ -710,6 +729,11 @@ const sendMessage = () => {
 
     messages.push(newMsg);
     localStorage.setItem('clarusNotifications', JSON.stringify(messages));
+
+    // SUPABASE SYNC UP
+    if (window.db && window.db.sendNotification) {
+        window.db.sendNotification(editingCompanyId, text).catch(e => console.error("Sync Error:", e));
+    }
 
     document.getElementById('comm-message').value = '';
     renderCommHistory(editingCompanyId);
@@ -1390,6 +1414,12 @@ const simulateUploadProcessing = async (filesObj) => {
                 }
 
                 localStorage.setItem(dataKey, JSON.stringify(d));
+
+                // SUPABASE SYNC UP
+                if (window.db && window.db.saveFinancialData) {
+                    const typeStr = prefix === 'clarusData_' ? 'dre' : 'fluxo';
+                    window.db.saveFinancialData(editingCompanyId, mKey, typeStr, d).catch(e => console.error("Sync Error:", e));
+                }
             }
         };
 

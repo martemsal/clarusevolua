@@ -87,10 +87,35 @@ window.applyGlobalSettings = (settings) => {
 };
 
 // Main Application Logic
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     // Apply Global Settings
     const savedGlobal = JSON.parse(localStorage.getItem('clarusGlobalSettings') || '{}');
     if (savedGlobal.systemName || savedGlobal.logoPath) window.applyGlobalSettings(savedGlobal);
+
+    // SUPABASE SYNC DOWN: Fetch latest companies and data before routing
+    if (window.db && window.db.getCompanies) {
+        try {
+            console.log("🔄 Iniciando sincronização com o Supabase...");
+            const cloudCompanies = await window.db.getCompanies();
+            if (cloudCompanies && cloudCompanies.length > 0) {
+                // Mapear dados do banco para o formato esperado pelo front
+                const formattedCompanies = cloudCompanies.map(c => ({
+                    id: c.id,
+                    name: c.name,
+                    password: c.password,
+                    level: c.level,
+                    capitalSocial: c.capital_social,
+                    modules: c.modules || [],
+                    banks: c.banks || [],
+                    files: c.files || []
+                }));
+                localStorage.setItem('clarusCompanies', JSON.stringify(formattedCompanies));
+                console.log("✅ Sincronização de Clientes concluída.");
+            }
+        } catch (e) {
+            console.error("❌ Falha ao sincronizar com Supabase (operando offline):", e);
+        }
+    }
 
     // Login Handling
     const loginForm = document.getElementById('login-form');
@@ -157,7 +182,7 @@ document.addEventListener('DOMContentLoaded', () => {
         loginScreen.classList.add('view-active');
     }
 
-    loginForm.addEventListener('submit', (e) => {
+    loginForm.addEventListener('submit', async (e) => {
         e.preventDefault();
 
         // Mock authentication
@@ -170,73 +195,88 @@ document.addEventListener('DOMContentLoaded', () => {
         submitBtn.style.opacity = '0.8';
         submitBtn.disabled = true;
 
-        setTimeout(() => {
-            if (id === "admin") {
-                if (pwd !== "admin" && pwd !== "123456") {
+        await new Promise(r => setTimeout(r, 500));
+
+        if (id === "admin") {
+            if (pwd !== "admin" && pwd !== "123456") {
+                submitBtn.innerHTML = 'Acessar Painel';
+                submitBtn.style.opacity = '1';
+                submitBtn.disabled = false;
+                alert("Senha de administrador incorreta.");
+                return;
+            }
+            window.currentUserId = "admin";
+            localStorage.setItem('clarusSessionId', 'admin');
+            // Route to Admin Panel
+            loginScreen.classList.remove('view-active');
+            setTimeout(() => {
+                loginScreen.classList.add('hidden');
+                const adScreen = document.getElementById('admin-screen');
+                adScreen.classList.remove('hidden');
+                void adScreen.offsetWidth;
+                adScreen.classList.add('view-active');
+                if (window.initAdminPanel) window.initAdminPanel();
+            }, 500);
+        } else {
+            let companies = JSON.parse(localStorage.getItem('clarusCompanies') || '[]');
+            const client = companies.find(c => c.id === id);
+
+            if (client) {
+                // Check password if it's set in the client object, otherwise allow (fallback for old accounts)
+                if (client.password && client.password !== pwd) {
                     submitBtn.innerHTML = 'Acessar Painel';
                     submitBtn.style.opacity = '1';
                     submitBtn.disabled = false;
-                    alert("Senha de administrador incorreta.");
+                    alert("Senha incorreta. Tente novamente.");
                     return;
                 }
-                window.currentUserId = "admin";
-                localStorage.setItem('clarusSessionId', 'admin');
-                // Route to Admin Panel
+
+                window.currentUserId = id;
+                window.currentUserModules = client.modules || [];
+                localStorage.setItem('clarusSessionId', id);
+
+                // SUPABASE SYNC DOWN: Financial Data
+                if (window.db && window.db.getAllFinancialData) {
+                    try {
+                        const allData = await window.db.getAllFinancialData(id);
+                        allData.forEach(record => {
+                            const prefix = record.data_type === 'dre' ? 'clarusData_' : 'clarusDataVenc_';
+                            const key = `${prefix}${id}_${record.month}`;
+                            localStorage.setItem(key, JSON.stringify(record.payload));
+                        });
+                        console.log("✅ Dados financeiros sincronizados.");
+                    } catch (e) {
+                        console.error("Cloud Sync Data Error:", e);
+                    }
+                }
+
+                // Route to Normal Dashboard
+                displayCompanyName.textContent = client.name;
+                if (window.currentUserId === 'admin' || localStorage.getItem('clarusSessionId') === 'admin') {
+                    localStorage.setItem('clarusAdminViewingId', id);
+                    localStorage.setItem('clarusAdminIsViewingApp', 'true');
+                }
                 loginScreen.classList.remove('view-active');
                 setTimeout(() => {
                     loginScreen.classList.add('hidden');
-                    const adScreen = document.getElementById('admin-screen');
-                    adScreen.classList.remove('hidden');
-                    void adScreen.offsetWidth;
-                    adScreen.classList.add('view-active');
-                    if (window.initAdminPanel) window.initAdminPanel();
+                    appScreen.classList.remove('hidden');
+                    void appScreen.offsetWidth;
+                    appScreen.classList.add('view-active');
+                    if (window.refreshDashboardsWithData) window.refreshDashboardsWithData();
+                    if (window.initNotifications) window.initNotifications();
                 }, 500);
             } else {
-                let companies = JSON.parse(localStorage.getItem('clarusCompanies') || '[]');
-                const client = companies.find(c => c.id === id);
-
-                if (client) {
-                    // Check password if it's set in the client object, otherwise allow (fallback for old accounts)
-                    if (client.password && client.password !== pwd) {
-                        submitBtn.innerHTML = 'Acessar Painel';
-                        submitBtn.style.opacity = '1';
-                        submitBtn.disabled = false;
-                        alert("Senha incorreta. Tente novamente.");
-                        return;
-                    }
-
-                    window.currentUserId = id;
-                    window.currentUserModules = client.modules || [];
-                    localStorage.setItem('clarusSessionId', id);
-
-                    // Route to Normal Dashboard
-                    displayCompanyName.textContent = client.name;
-                    if (window.currentUserId === 'admin' || localStorage.getItem('clarusSessionId') === 'admin') {
-                        localStorage.setItem('clarusAdminViewingId', id);
-                        localStorage.setItem('clarusAdminIsViewingApp', 'true');
-                    }
-                    loginScreen.classList.remove('view-active');
-                    setTimeout(() => {
-                        loginScreen.classList.add('hidden');
-                        appScreen.classList.remove('hidden');
-                        void appScreen.offsetWidth;
-                        appScreen.classList.add('view-active');
-                        if (window.refreshDashboardsWithData) window.refreshDashboardsWithData();
-                        if (window.initNotifications) window.initNotifications();
-                    }, 500);
-                } else {
-                    submitBtn.innerHTML = 'Acessar Painel';
-                    submitBtn.style.opacity = '1';
-                    submitBtn.disabled = false;
-                    alert("Cliente não encontrado. Verifique o ID digitado. (Para painel gerencial use: admin)");
-                }
+                submitBtn.innerHTML = 'Acessar Painel';
+                submitBtn.style.opacity = '1';
+                submitBtn.disabled = false;
+                alert("Cliente não encontrado. Verifique o ID digitado. (Para painel gerencial use: admin)");
             }
+        }
 
-            // Reset button for logout
-            submitBtn.innerHTML = 'Acessar Painel';
-            submitBtn.style.opacity = '1';
-            submitBtn.disabled = false;
-        }, 800);
+        // Reset button for fail state (success routes away)
+        submitBtn.innerHTML = 'Acessar Painel';
+        submitBtn.style.opacity = '1';
+        submitBtn.disabled = false;
     });
 
     const forgotPwdLink = document.getElementById('forgot-password-link');

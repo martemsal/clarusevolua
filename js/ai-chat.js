@@ -165,10 +165,14 @@ IMPORTANTE: Você pode realizar ações no sistema usando blocos especiais de co
 [ACTION:REFRESH_DATA] - Sincronizar dados com o Supabase/Nuvem
 Exemplo: "Vou te levar para o módulo de Bancos. [ACTION:OPEN_VIEW|bancos]"`;
 
-        // 1. Try Gemini
-        const geminiRes = await callGemini(query, fullContext, currentLIAMonthLabel + "\n\n" + actionPrompt);
+        // 1. Try Gemini with Detailed Error Catching
+        let geminiError = null;
+        const geminiRes = await callGemini(query, fullContext, currentLIAMonthLabel + "\n\n" + actionPrompt).catch(e => {
+            geminiError = e.message;
+            return null;
+        });
         
-        if (geminiRes) {
+        if (geminiRes && typeof geminiRes === 'string') {
             let res = geminiRes.replace(/\*\*/g, '<strong>').replace(/\*\*/g, '</strong>').replace(/\n/g, '<br>');
             
             // --- ACTION PARSER ---
@@ -176,7 +180,6 @@ Exemplo: "Vou te levar para o módulo de Bancos. [ACTION:OPEN_VIEW|bancos]"`;
                 const match = res.match(/\[ACTION:OPEN_VIEW\|([^\]]+)\]/);
                 if (match && match[1]) {
                     const viewId = match[1].trim();
-                    console.log("LIA: Executando troca de vista para", viewId);
                     const navLink = document.querySelector(`.nav-item[data-target="${viewId}"]`);
                     if (navLink) {
                         setTimeout(() => navLink.click(), 1000);
@@ -189,14 +192,12 @@ Exemplo: "Vou te levar para o módulo de Bancos. [ACTION:OPEN_VIEW|bancos]"`;
 
             if (res.includes('[ACTION:DOWNLOAD_PDF]')) {
                 const match = res.match(/\[ACTION:DOWNLOAD_PDF\]/);
-                console.log("LIA: Executando download de PDF");
                 setTimeout(() => window.downloadLIAForPeriod(currentLIAMonthVal, currentLIAMonthLabel), 1500);
                 res = res.replace(match[0], '<span style="color:var(--accent-gold); font-size:0.75rem; display:block; margin-top:5px;"><i class="fa-solid fa-spinner fa-spin"></i> Preparando Relatório PDF...</span>');
             }
 
             if (res.includes('[ACTION:REFRESH_DATA]')) {
                 const match = res.match(/\[ACTION:REFRESH_DATA\]/);
-                console.log("LIA: Executando Sincronização");
                 if (window.syncCloudToLocal) setTimeout(() => window.syncCloudToLocal(), 500);
                 res = res.replace(match[0], '<span style="color:var(--accent-gold); font-size:0.75rem; display:block; margin-top:5px;"><i class="fa-solid fa-cloud-arrow-down"></i> Sincronizando com a Nuvem...</span>');
             }
@@ -204,9 +205,23 @@ Exemplo: "Vou te levar para o módulo de Bancos. [ACTION:OPEN_VIEW|bancos]"`;
             return res;
         }
 
-        // 2. Fallback Local Logic (Simplified now that Gemini is prioritized)
-        let res = `Para <strong>${currentLIAMonthLabel}</strong>, analisei seus dados: <br><br>`;
+        // 2. Fallback Local Logic with Error Context
+        let res = `Para <strong>${currentLIAMonthLabel}</strong>, analisei seus dados localmente: <br><br>`;
         res += `Seu faturamento foi de <strong>${formatBRL(fullContext.faturamento)}</strong> e o lucro de <strong>${formatBRL(fullContext.lucro_liquido)}</strong>.`;
+        
+        const apiKey = localStorage.getItem('clarusGeminiKey');
+        if (!apiKey) {
+            res += `<br><br><div style="background:rgba(239,68,68,0.1); border:1px solid #ef4444; padding:10px; border-radius:8px; font-size:0.75rem; color:#fca5a5;">
+                <i class="fa-solid fa-key"></i> <strong>Chave Gemini não detectada.</strong><br>
+                Vá em Painel Admin > Configurações Globais e salve sua API Key para ativar a inteligência avançada.
+            </div>`;
+        } else if (geminiError || !geminiRes) {
+            res += `<br><br><div style="background:rgba(239,68,68,0.1); border:1px solid #ef4444; padding:10px; border-radius:8px; font-size:0.75rem; color:#fca5a5;">
+                <i class="fa-solid fa-circle-exclamation"></i> <strong>Erro de Conexão:</strong><br>
+                ${geminiError || 'Não foi possível obter resposta da Google AI Studio. Verifique se sua chave é válida ou se o modelo Gemini 1.5 Flash está disponível na sua região.'}
+            </div>`;
+        }
+
         res += `<br><br><button onclick="window.downloadLIAForPeriod('${currentLIAMonthVal}', '${currentLIAMonthLabel}')" class="btn-primary" style="padding:10px; font-size:0.8rem; width:100%; cursor:pointer; background:var(--accent-gold); color:#000; border:none; border-radius:8px; font-weight:700;"><i class="fa-solid fa-file-pdf"></i> Download PDF de ${currentLIAMonthLabel}</button>`;
         return res;
     };

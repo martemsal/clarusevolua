@@ -158,5 +158,29 @@ Object.assign(window.db, {
             
         if (error) console.error("Erro ao enviar notificação:", error);
         return !error;
+    },
+
+    // --- CONFIGURAÇÕES GLOBAIS (API KEYS, BRANDING) ---
+    async getSettings(id) {
+        if (!_supabaseClient) return null;
+        const { data, error } = await _supabaseClient
+            .from('system_config')
+            .select('value')
+            .eq('id', id)
+            .single();
+        if (error && error.code !== 'PGRST116') {
+            console.error("Erro ao buscar config:", error);
+            return null;
+        }
+        return data ? data.value : null;
+    },
+
+    async saveSettings(id, value) {
+        if (!_supabaseClient) return false;
+        const { error } = await _supabaseClient
+            .from('system_config')
+            .upsert({ id, value }, { onConflict: 'id' });
+        if (error) console.error("Erro ao salvar config:", error);
+        return !error;
     }
 });

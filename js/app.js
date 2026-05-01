@@ -112,6 +112,19 @@ document.addEventListener('DOMContentLoaded', async () => {
                 console.log(`✅ ${formattedCompanies.length} empresas sincronizadas.`);
             }
 
+            // 1.1 Sync Global Settings (Branding & API Keys)
+            if (window.db && window.db.getSettings) {
+                const globalConfig = await window.db.getSettings('global_config');
+                if (globalConfig) {
+                    localStorage.setItem('clarusGlobalSettings', JSON.stringify(globalConfig));
+                    if (window.applyGlobalSettings) window.applyGlobalSettings(globalConfig);
+                }
+                const geminiConfig = await window.db.getSettings('gemini_key');
+                if (geminiConfig && geminiConfig.key) {
+                    localStorage.setItem('clarusGeminiKey', geminiConfig.key);
+                }
+            }
+
             // 2. Sync Financial Data if logged in
             const currentId = localStorage.getItem('clarusSessionId');
             if (currentId && currentId !== 'admin' && window.db.getAllFinancialData) {

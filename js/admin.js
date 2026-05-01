@@ -1939,7 +1939,7 @@ if (btnCloseGlobal) {
 }
 
 if (globalForm) {
-    globalForm.addEventListener('submit', (e) => {
+    globalForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const settings = {
             systemName: document.getElementById('global-system-name').value.trim(),
@@ -1947,14 +1947,20 @@ if (globalForm) {
         };
         const geminiKey = document.getElementById('global-gemini-key').value.trim();
 
+        // Salva Local
         localStorage.setItem('clarusGlobalSettings', JSON.stringify(settings));
         if (geminiKey) localStorage.setItem('clarusGeminiKey', geminiKey);
         else localStorage.removeItem('clarusGeminiKey');
 
-        // Trigger UI update if function exists (it should be in app.js)
+        // SALVA NA NUVEM (Supabase)
+        if (window.db && window.db.saveSettings) {
+            await window.db.saveSettings('global_config', settings);
+            if (geminiKey) await window.db.saveSettings('gemini_key', { key: geminiKey });
+        }
+
         if (window.applyGlobalSettings) window.applyGlobalSettings(settings);
 
-        alert("Configurações Globais salvas com sucesso!");
+        alert("Configurações Globais sincronizadas com a Nuvem!");
         globalSettingsModal.classList.add('hidden');
     });
 }

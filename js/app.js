@@ -88,36 +88,50 @@ window.applyGlobalSettings = (settings) => {
 
 // Main Application Logic
 document.addEventListener('DOMContentLoaded', async () => {
-    // Apply Global Settings
-    const savedGlobal = JSON.parse(localStorage.getItem('clarusGlobalSettings') || '{}');
-    if (savedGlobal.systemName || savedGlobal.logoPath) window.applyGlobalSettings(savedGlobal);
-
-    // SUPABASE SYNC DOWN: Fetch latest companies and data before routing
-    if (window.db && window.db.getCompanies) {
+    window.syncCloudToLocal = async () => {
+        if (!window.db) return;
+        
         try {
-            console.log("🔄 Iniciando sincronização com o Supabase...");
-            const cloudCompanies = await window.db.getCompanies() || [];
+            console.log("🔄 Sincronizando com Supabase...");
             
-            // Mapear dados do banco para o formato esperado pelo front
-            const formattedCompanies = cloudCompanies.map(c => ({
-                id: c.id,
-                name: c.name,
-                password: c.password,
-                level: c.level,
-                capitalSocial: c.capital_social,
-                modules: c.modules || [],
-                banks: c.banks || [],
-                files: c.files || []
-            }));
-            
-            localStorage.setItem('clarusCompanies', JSON.stringify(formattedCompanies));
-            console.log(`✅ Sincronização de Clientes concluída. (${formattedCompanies.length} empresas)`);
-        } catch (e) {
-            console.error("❌ Falha ao sincronizar com Supabase (operando offline):", e);
-        }
-    }
+            // 1. Sync Companies List
+            if (window.db.getCompanies) {
+                const cloudCompanies = await window.db.getCompanies() || [];
+                const formattedCompanies = cloudCompanies.map(c => ({
+                    id: c.id,
+                    name: c.name,
+                    password: c.password,
+                    level: c.level,
+                    capitalSocial: c.capital_social,
+                    modules: c.modules || [],
+                    banks: c.banks || [],
+                    loans: c.loans || [],
+                    files: c.files || []
+                }));
+                localStorage.setItem('clarusCompanies', JSON.stringify(formattedCompanies));
+                console.log(`✅ ${formattedCompanies.length} empresas sincronizadas.`);
+            }
 
-    // Login Handling
+            // 2. Sync Financial Data if logged in
+            const currentId = localStorage.getItem('clarusSessionId');
+            if (currentId && currentId !== 'admin' && window.db.getAllFinancialData) {
+                const allData = await window.db.getAllFinancialData(currentId);
+                allData.forEach(record => {
+                    const prefix = record.data_type === 'dre' ? 'clarusData_' : 'clarusDataVenc_';
+                    const key = `${prefix}${currentId}_${record.month}`;
+                    localStorage.setItem(key, JSON.stringify(record.payload));
+                });
+                console.log("✅ Dados financeiros sincronizados.");
+            }
+            
+            return true;
+        } catch (e) {
+            console.error("❌ Falha na sincronização Cloud:", e);
+            return false;
+        }
+    };
+
+    // Main initialization
     const loginForm = document.getElementById('login-form');
     const loginScreen = document.getElementById('login-screen');
     const appScreen = document.getElementById('app-screen');
@@ -126,61 +140,69 @@ document.addEventListener('DOMContentLoaded', async () => {
     const companyIdInput = document.getElementById('company-id');
     const displayCompanyName = document.getElementById('display-company-name');
 
-    // Auto-Re-Login Persistence (Move this to the start to avoid flicker)
-    const savedSession = localStorage.getItem('clarusSessionId');
-    const isAdminViewingApp = localStorage.getItem('clarusAdminIsViewingApp') === 'true';
+    const initApp = async () => {
+        // Apply Global Settings
+        const savedGlobal = JSON.parse(localStorage.getItem('clarusGlobalSettings') || '{}');
+        if (savedGlobal.systemName || savedGlobal.logoPath) window.applyGlobalSettings(savedGlobal);
 
-    if (savedSession === 'admin') {
-        if (isAdminViewingApp) {
-            // Admin was viewing a client's dashboard
-            const viewingId = localStorage.getItem('clarusAdminViewingId');
-            const companies = JSON.parse(localStorage.getItem('clarusCompanies') || '[]');
-            const client = companies.find(c => c.id === viewingId);
-            if (client) {
-                displayCompanyName.textContent = client.name;
-                loginScreen.classList.add('hidden');
-                appScreen.classList.remove('hidden');
-                appScreen.classList.add('view-active');
-                if (window.refreshDashboardsWithData) window.refreshDashboardsWithData();
+        // Blocking Sync
+        await window.syncCloudToLocal();
+        
+        // Fill selectors after sync
+        if (window.fillMonthSelectors) window.fillMonthSelectors();
+
+        // Route Persistence
+        const savedSession = localStorage.getItem('clarusSessionId');
+        const isAdminViewingApp = localStorage.getItem('clarusAdminIsViewingApp') === 'true';
+
+        if (savedSession === 'admin') {
+            if (isAdminViewingApp) {
+                const viewingId = localStorage.getItem('clarusAdminViewingId');
+                const companies = JSON.parse(localStorage.getItem('clarusCompanies') || '[]');
+                const client = companies.find(c => c.id === viewingId);
+                if (client) {
+                    displayCompanyName.textContent = client.name;
+                    loginScreen.classList.add('hidden');
+                    appScreen.classList.remove('hidden');
+                    appScreen.classList.add('view-active');
+                    if (window.refreshDashboardsWithData) window.refreshDashboardsWithData();
+                } else {
+                    localStorage.removeItem('clarusAdminIsViewingApp');
+                    loginScreen.classList.add('hidden');
+                    adminScreen.classList.remove('hidden');
+                    adminScreen.classList.add('view-active');
+                    if (window.initAdminPanel) window.initAdminPanel();
+                }
             } else {
                 loginScreen.classList.add('hidden');
                 adminScreen.classList.remove('hidden');
                 adminScreen.classList.add('view-active');
                 if (window.initAdminPanel) window.initAdminPanel();
             }
-        } else {
-            loginScreen.classList.add('hidden');
-            adminScreen.classList.remove('hidden');
-            adminScreen.classList.add('view-active');
-            if (window.initAdminPanel) {
-                window.initAdminPanel();
-                const viewingId = localStorage.getItem('clarusAdminViewingId');
-                if (viewingId && window.openAdminModal) {
-                    setTimeout(() => window.openAdminModal(viewingId), 100);
-                }
+        } else if (savedSession) {
+            const companies = JSON.parse(localStorage.getItem('clarusCompanies') || '[]');
+            const client = companies.find(c => c.id === savedSession);
+            if (client) {
+                displayCompanyName.textContent = client.name;
+                window.currentUserId = savedSession;
+                window.currentUserModules = client.modules || [];
+                loginScreen.classList.add('hidden');
+                appScreen.classList.remove('hidden');
+                appScreen.classList.add('view-active');
+                if (window.refreshDashboardsWithData) window.refreshDashboardsWithData();
+            } else {
+                localStorage.removeItem('clarusSessionId');
+                loginScreen.classList.remove('hidden');
+                loginScreen.classList.add('view-active');
             }
-        }
-    } else if (savedSession) {
-        // Client session
-        const companies = JSON.parse(localStorage.getItem('clarusCompanies') || '[]');
-        const client = companies.find(c => c.id === savedSession);
-        if (client) {
-            window.currentUserId = savedSession;
-            window.currentUserModules = client.modules || [];
-            displayCompanyName.textContent = client.name;
-            loginScreen.classList.add('hidden');
-            appScreen.classList.remove('hidden');
-            appScreen.classList.add('view-active');
-            if (window.refreshDashboardsWithData) window.refreshDashboardsWithData();
-            if (window.initNotifications) window.initNotifications();
         } else {
             loginScreen.classList.remove('hidden');
             loginScreen.classList.add('view-active');
         }
-    } else {
-        loginScreen.classList.remove('hidden');
-        loginScreen.classList.add('view-active');
-    }
+    };
+
+    // Execute initialization
+    await initApp();
 
     loginForm.addEventListener('submit', async (e) => {
         e.preventDefault();

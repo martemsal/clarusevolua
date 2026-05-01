@@ -181,6 +181,7 @@ window.initAdminPanel = async () => {
                 capitalSocial: c.capital_social,
                 modules: c.modules || [],
                 banks: c.banks || [],
+                loans: c.loans || [],
                 files: c.files || []
             }));
             localStorage.setItem('clarusCompanies', JSON.stringify(mockCompanies));

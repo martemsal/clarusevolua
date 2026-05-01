@@ -96,22 +96,22 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (window.db && window.db.getCompanies) {
         try {
             console.log("🔄 Iniciando sincronização com o Supabase...");
-            const cloudCompanies = await window.db.getCompanies();
-            if (cloudCompanies && cloudCompanies.length > 0) {
-                // Mapear dados do banco para o formato esperado pelo front
-                const formattedCompanies = cloudCompanies.map(c => ({
-                    id: c.id,
-                    name: c.name,
-                    password: c.password,
-                    level: c.level,
-                    capitalSocial: c.capital_social,
-                    modules: c.modules || [],
-                    banks: c.banks || [],
-                    files: c.files || []
-                }));
-                localStorage.setItem('clarusCompanies', JSON.stringify(formattedCompanies));
-                console.log("✅ Sincronização de Clientes concluída.");
-            }
+            const cloudCompanies = await window.db.getCompanies() || [];
+            
+            // Mapear dados do banco para o formato esperado pelo front
+            const formattedCompanies = cloudCompanies.map(c => ({
+                id: c.id,
+                name: c.name,
+                password: c.password,
+                level: c.level,
+                capitalSocial: c.capital_social,
+                modules: c.modules || [],
+                banks: c.banks || [],
+                files: c.files || []
+            }));
+            
+            localStorage.setItem('clarusCompanies', JSON.stringify(formattedCompanies));
+            console.log(`✅ Sincronização de Clientes concluída. (${formattedCompanies.length} empresas)`);
         } catch (e) {
             console.error("❌ Falha ao sincronizar com Supabase (operando offline):", e);
         }

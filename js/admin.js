@@ -11,76 +11,22 @@ const parseBRL = (s) => {
 
 // Admin Panel Logic - Unified
 
-const defaultCompanies = [
-    {
-        id: "123",
-        name: "RED LTDA",
-        level: 1,
-        modules: ["Saúde Financeira", "Fluxo de Caixa", "Crescimento Empresarial", "Controle de Estoque"],
-        banks: ["Itaú Unibanco (CC)", "Caixa (Espécie)"],
-        files: ["Template_GoogleSheets_Clarus.csv"]
-    },
-    {
-        id: "987",
-        name: "Restaurante Sabor Bom",
-        level: 2,
-        modules: ["Saúde Financeira", "Fluxo de Caixa", "Rentabilidade e Curva ABC", "Gestão Comercial", "Controle de Estoque"],
-        banks: ["Bradesco Empresas", "Stone Pagamentos"],
-        files: ["extrato_bradesco_junho.pdf", "notas_fiscais_entrada.xml"]
-    },
-    {
-        id: "456",
-        name: "Tech Solutions Inc",
-        level: 3,
-        modules: ["Saúde Financeira", "Fluxo de Caixa", "Rentabilidade e Curva ABC", "Gestão Comercial", "Crescimento Empresarial", "Controle de Estoque"],
-        banks: ["Nubank PJ", "Banco Inter"],
-        files: ["integracao_api_omie.json", "folha_pagamento_maio.xlsx"]
-    }
-];
+// Admin Panel Logic - Unified
+// Removendo dados mockados locais para usar apenas Supabase conforme pedido do USER
+const defaultCompanies = [];
 
 // Configure PDF.js Worker
 if (typeof pdfjsLib !== 'undefined') {
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 }
 
-let mockCompanies = JSON.parse(localStorage.getItem('clarusCompanies'));
-if (!mockCompanies || mockCompanies.length === 0) {
-    mockCompanies = defaultCompanies;
-    localStorage.setItem('clarusCompanies', JSON.stringify(mockCompanies));
-}
+let mockCompanies = JSON.parse(localStorage.getItem('clarusCompanies') || '[]');
 
-// FORCED PATCH: Deep Units Merge & State Fix
-const APP_VERSION = "1.5.4";
+// FORCED PATCH: State Fix
+const APP_VERSION = "1.9.1";
 if (localStorage.getItem('clarusAppVersion') !== APP_VERSION) {
-    console.log("%c🚀 [SISTEMA] ATUALIZAÇÃO FORÇADA DETECTADA: v" + APP_VERSION, "color: #fbbf24; font-size: 20px; font-weight: bold; background: #1e1b4b; padding: 10px; border-radius: 5px;");
-
-    // Recovery Logic: Scan localStorage for existing data and repopulate the file list
-    const keys = Object.keys(localStorage);
-    mockCompanies.forEach(c => {
-        if (c.id === "123") c.name = "RED LTDA";
-        if (!c.modules.includes("Controle de Estoque")) c.modules.push("Controle de Estoque");
-
-        // Find contributions in data keys
-        const recoveredFiles = new Set(c.files || []);
-        keys.forEach(k => {
-            if (k.includes(`_${c.id}_`)) {
-                try {
-                    const data = JSON.parse(localStorage.getItem(k));
-                    if (data && data._contributions) {
-                        Object.keys(data._contributions).forEach(fname => recoveredFiles.add(fname));
-                    }
-                    if (data && data.estoque_data && !recoveredFiles.has("PLANILHA ESTOQUE MARÇO 2026.xlsm")) {
-                        // Tagging the known success file if data exists
-                    }
-                } catch (e) { }
-            }
-        });
-        c.files = Array.from(recoveredFiles);
-    });
-
-    localStorage.setItem('clarusCompanies', JSON.stringify(mockCompanies));
     localStorage.setItem('clarusAppVersion', APP_VERSION);
-    console.log("🚀 [System] Recuperação de arquivos concluída. Versão v" + APP_VERSION + " aplicada.");
+    console.log("🚀 [System] Versão v" + APP_VERSION + " aplicada.");
 }
 
 const saveAdminData = async () => {
@@ -182,20 +128,47 @@ ly: monospace;">ID: ${comp.id}</div>
 
     // Attach Delete Listeners
     document.querySelectorAll('.btn-delete-company').forEach(btn => {
-        btn.addEventListener('click', (e) => {
+        btn.addEventListener('click', async (e) => {
             const id = e.currentTarget.getAttribute('data-id');
             const comp = mockCompanies.find(c => c.id === id);
-            if (confirm(`ATENÇÃO: Deseja realmente excluir o cliente "${comp.name}"? Todos os arquivos e dados serão perdidos permanentemente.`)) {
+            if (confirm(`ATENÇÃO: Deseja realmente excluir o cliente "${comp.name}"? Todos os arquivos e dados serão perdidos permanentemente no Supabase.`)) {
+                
+                // 1. Delete from Supabase
+                if (window.db && window.db.deleteCompany) {
+                    const result = await window.db.deleteCompany(id);
+                    if (!result.success) {
+                        alert("Erro ao excluir no Supabase: " + result.error);
+                        return;
+                    }
+                }
+
+                // 2. Local cleanup
                 mockCompanies = mockCompanies.filter(c => c.id !== id);
-                saveAdminData();
+                localStorage.setItem('clarusCompanies', JSON.stringify(mockCompanies));
                 renderAdminCompanies();
-                alert(`Cliente "${comp.name}" excluído.`);
+                alert(`Cliente "${comp.name}" excluído do sistema.`);
             }
         });
     });
 };
 
-window.initAdminPanel = () => {
+window.initAdminPanel = async () => {
+    // Sincronização inicial forçada antes de renderizar
+    if (window.db && window.db.getCompanies) {
+        console.log("🔄 [Admin] Buscando clientes atualizados do Supabase...");
+        const cloudCompanies = await window.db.getCompanies();
+        mockCompanies = cloudCompanies.map(c => ({
+            id: c.id,
+            name: c.name,
+            password: c.password,
+            level: c.level,
+            capitalSocial: c.capital_social,
+            modules: c.modules || [],
+            banks: c.banks || [],
+            files: c.files || []
+        }));
+        localStorage.setItem('clarusCompanies', JSON.stringify(mockCompanies));
+    }
     renderAdminCompanies();
 };
 

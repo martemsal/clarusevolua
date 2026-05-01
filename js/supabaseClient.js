@@ -52,6 +52,19 @@ window.db = {
         return { success: true };
     },
 
+    async deleteCompany(id) {
+        const { error } = await supabase
+            .from('companies')
+            .delete()
+            .eq('id', id);
+            
+        if (error) {
+            console.error("❌ [Supabase] Erro ao deletar empresa:", error);
+            return { success: false, error: error.message };
+        }
+        return { success: true };
+    },
+
     // --- DADOS FINANCEIROS (DRE e FLUXO) ---
     async getFinancialData(companyId, month, dataType) {
         const { data, error } = await supabase

@@ -809,7 +809,7 @@ body.light-theme .page-title p {
 }
 
 .notif-list {
-    max-height: 350px;
+    max-height: 21.875rem; /* 350px */
     overflow-y: auto;
 }
 
@@ -1028,9 +1028,9 @@ body.light-theme .page-title p {
 /* Chart Containers */
 .timeline {
     position: relative;
-    padding-left: 20px;
+    padding-left: 1.25rem; /* 20px */
     margin-top: 1rem;
-    max-height: 400px;
+    max-height: 25rem; /* 400px */
     overflow-y: auto;
     padding-right: 10px;
 }
@@ -1046,7 +1046,7 @@ body.light-theme .page-title p {
 
 .chart-container {
     position: relative;
-    height: 300px;
+    height: 18.75rem; /* 300px */
     width: 100%;
 }
 
@@ -1203,7 +1203,7 @@ body.light-theme .page-title p {
     text-align: center;
     border: 1px solid var(--accent-gold);
     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
-    max-width: 450px;
+    max-width: 28.125rem; /* 450px */
 }
 
 .locked-module-content h3 {
@@ -1227,15 +1227,15 @@ body.light-theme .page-title p {
     position: fixed;
     bottom: 2rem;
     right: 2rem;
-    width: 60px;
-    height: 60px;
+    width: 3.75rem; /* 60px */
+    height: 3.75rem; /* 60px */
     border-radius: 50%;
     background: linear-gradient(135deg, var(--accent-purple), #c084fc);
     color: white;
     border: none;
     font-size: 1.5rem;
     cursor: pointer;
-    box-shadow: 0 10px 25px rgba(139, 92, 246, 0.5);
+    box-shadow: 0 0.625rem 1.5625rem rgba(139, 92, 246, 0.5);
     z-index: 100;
     transition: var(--transition);
     display: flex;
@@ -1256,12 +1256,12 @@ body.light-theme .page-title p {
     position: fixed;
     bottom: 5.5rem;
     right: 2rem;
-    width: 380px;
-    height: 550px;
+    width: 23.75rem; /* 380px */
+    height: 34.375rem; /* 550px */
     background: var(--bg-card);
     border: 1px solid rgba(139, 92, 246, 0.3);
     border-radius: var(--border-radius);
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
+    box-shadow: 0 1.5625rem 3.125rem -0.75rem rgba(0, 0, 0, 0.6);
     z-index: 100;
     display: flex;
     flex-direction: column;
@@ -1424,7 +1424,7 @@ body.light-theme .page-title p {
     flex-direction: column;
     justify-content: space-between;
     transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s ease;
-    min-height: 220px;
+    min-height: 13.75rem; /* 220px */
     border-top: 2px solid transparent;
 }
 

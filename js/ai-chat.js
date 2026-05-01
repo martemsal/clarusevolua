@@ -43,43 +43,39 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!apiKey) return null;
 
         const companyName = document.getElementById('display-company-name')?.textContent || 'Cliente';
-        const systemPrompt = `Você é a LIA da CLARUS EVOLUA. Personalidade: Consultora Financeira de Elite, Amigável e Estratégica.
-Sua missão é analisar os dados de ${month} do cliente ${companyName} usando estas 9 diretrizes estritas:
+        const systemPrompt = `Você é a LIA da CLARUS EVOLUA. Consultora Financeira de Elite. 
+        Analise os dados de ${month} do cliente ${companyName} com base nestas diretrizes:
+        1. Margem Líquida (>10%), EBITDA, Fluxo de Caixa, Ciclo Financeiro, NCG, Endividamento, Ticket Médio, CAC/LTV e Produtividade.
+        Dados: ${JSON.stringify(jsonData)}.
+        Instruções Adicionais: ${instructions}
+        Responda de forma estratégica e sugira ações práticas.`;
 
-1. MARGEM LÍQUIDA: (Lucro Líquido / Receita Líquida) * 100. Saudável > 10%, Alerta 5-10%, Crítico < 5%. Se baixo: revisar custos, cortar despesas, reavaliar preços.
-2. EBITDA: Lucro Operacional + Depreciação + Amortização. Mostra geração de resultado puro. Melhore reduzindo despesas operacionais.
-3. GERAÇÃO DE CAIXA: Entradas Op - Saídas Op. Deve ser positivo. Se negativo: melhorar cobrança e rever prazos.
-4. CICLO FINANCEIRO: PME + PMR - PMP. Quanto menor, melhor. Se alto: reduzir estoque, receber rápido, negociar fornecedores.
-5. NCG (Capital de Giro): Ativo Circulante Op - Passivo Circulante Op. Quanto menor, melhor.
-6. ENDIVIDAMENTO: Passivo Total / Ativo Total. Quanto menor, melhor.
-7. TICKET MÉDIO: Receita Total / Nº de Vendas. Busque estratégias de Upsell/Cross-sell se estiver baixo.
-8. CAC vs LTV: LTV deve ser >= 3x o CAC. Se ruim: reduzir custo aquisição ou aumentar retenção.
-9. RECEITA POR FUNCIONÁRIO: Receita Total / Nº Funcionários. Mede eficiência operacional.
+        const models = ['gemini-1.5-flash', 'gemini-pro'];
+        let lastError = null;
 
-Dados atuais do cliente em JSON: ${JSON.stringify(jsonData)}.
-Responda sempre com base nestas fórmulas e sugira ações práticas de melhoria.`;
+        for (const modelName of models) {
+            try {
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: `${systemPrompt}\n\nUsuário pergunta: ${userMessage}` }] }]
+                    })
+                });
 
-        try {
-            const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    contents: [{ parts: [{ text: `${systemPrompt}\n\nUsuário pergunta: ${userMessage}` }] }]
-                })
-            });
-
-            if (!response.ok) {
-                const errData = await response.json().catch(() => ({}));
-                const errMsg = errData.error?.message || response.statusText;
-                throw new Error(`Google API (${response.status}): ${errMsg}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    return data.candidates?.[0]?.content?.parts?.[0]?.text || "Não consegui processar agora.";
+                } else {
+                    const errData = await response.json().catch(() => ({}));
+                    lastError = `Google API (${response.status}): ${errData.error?.message || response.statusText}`;
+                    console.warn(`LIA: Tentativa com ${modelName} falhou, tentando próximo...`);
+                }
+            } catch (e) {
+                lastError = e.message;
             }
-
-            const data = await response.json();
-            return data.candidates?.[0]?.content?.parts?.[0]?.text || "Não consegui processar essa informação agora.";
-        } catch (error) {
-            console.error("LIA: Falha na conexão:", error);
-            throw error;
         }
+        throw new Error(lastError || "Todos os modelos falharam.");
     };
 
     const generatePDFReport = async (data, monthLabel) => {

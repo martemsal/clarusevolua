@@ -1,0 +1,3 @@
+Data_Registro;ID_Vendedor;Nome_Vendedor;Produto_Servico;Num_Leads_Gerados;Num_Oportunidades;Num_Propostas_Enviadas;Num_Vendas_Fechadas;Valor_Total_Vendas;Custo_Marketing_Em_Reais;Churn_Em_Reais;Tempo_Vida_Medio_Meses
+2026-03-01;V01;Carlos S.;Mentoria Master;20;12;5;2;10000.00;1500.00;0.00;12
+2026-03-02;V02;Ana P.;Consultoria Ouro;15;8;3;1;6000.00;800.00;0.00;24

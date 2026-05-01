@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CLARUS EVOLUA - Painel de Gestão</title>
+    <meta name="description" content="Transformamos números confusos em decisões estratégicas.">
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- PDF.js for Caixa Extratos -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="css/style.css?v=1.8.7">
+</head>
+
+<body class="dark-theme">
+    <!-- Login Screen -->
+    <div id="login-screen" class="screen view-active">
+        <div class="login-container">
+            <div class="login-brand">
+                <div class="logo-container">
+                    <img src="img/logo.png" alt="CLARUS EVOLUA" class="app-logo"
+                        onerror="this.outerHTML='<h1>CLARUS <span>EVOLUA</span></h1>'">
+                </div>
+                <p>Clareza nos números. Evolução nos resultados.</p>
+            </div>
+            <form id="login-form">
+                <div class="input-group">
+                    <label for="company-id">ID do Cliente</label>
+                    <input type="text" id="company-id" placeholder="Ex: 31683274" required>
+                </div>
+                <div class="input-group">
+                    <label for="password">Senha Segura</label>
+                    <input type="password" id="password" placeholder="••••••••" required>
+                </div>
+                <button type="submit" class="btn-primary">Acessar Painel</button>
+                <div style="text-align: center; margin-top: 1rem;">
+                    <a href="#" id="forgot-password-link" style="color: var(--text-secondary); font-size: 0.85rem; text-decoration: none; transition: color 0.3s;">Esqueceu a senha?</a>
+                </div>
+            </form>
+            <div class="login-footer">
+                <p>Sistema de Gestão Financeira por Indicadores</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin Screen -->
+    <div id="admin-screen" class="screen hidden"
+        style="background-color: var(--bg-dark); display: flex; flex-direction: column;">
+        <header class="topbar" style="justify-content: space-between; padding: 0 2rem;">
+            <div class="logo-container sidebar-logo" style="margin-bottom: 0; padding: 0.25rem 0.5rem;">
+                <img src="img/logo.png" alt="CLARUS EVOLUA" class="app-logo" style="max-width: 120px;"
+                    onerror="this.outerHTML='<h4>CLARUS</h4>'">
+            </div>
+            <div style="display: flex; gap: 1rem; align-items: center;">
+                <span style="font-weight: 500;"><i class="fa-solid fa-user-shield accent"
+                        style="margin-right: 8px;"></i> Painel do Consultor</span>
+                <button id="btn-global-settings" class="btn-icon" title="Configurações Globais"><i
+                        class="fa-solid fa-gear"></i></button>
+                <button id="admin-logout-btn" class="btn-icon"><i class="fa-solid fa-right-from-bracket"></i></button>
+            </div>
+        </header>
+
+        <main style="padding: 2rem; flex: 1; overflow-y: auto;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 2rem;">
+                <div>
+                    <h2>Gestão de Clientes</h2>
+                    <p class="subtitle" style="color: var(--text-secondary);">Cadastre clientes, defina níveis de
+                        maturidade de dados e expansões.</p>
+                </div>
+                <button id="btn-new-company" class="btn-primary"
+                    style="width: auto; margin-top: 0; padding: 0.75rem 1.5rem;"><i class="fa-solid fa-plus"></i> Novo
+                    Cliente</button>
+            </div>
+
+            <!-- Admin Grid -->
+            <div class="grid-container grid-cols-3" id="admin-companies-list">
+                <!-- Filled dynamically by admin.js -->
+            </div>
+        </main>
+
+        <!-- Modal Unificado Edição/Ingestão (Admin) -->
+        <div id="admin-modal" class="modal hidden">
+            <div class="modal-content card" style="max-width: 900px; max-height: 90vh; overflow-y: auto;">
+                <div class="modal-header"
+                    style="display: flex; justify-content: space-between; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border-color); padding-bottom: 1rem; position: sticky; top: 0; background: var(--bg-card); z-index: 10;">
+                    <h3 id="modal-title"><i class="fa-solid fa-building"
+                            style="color: var(--accent-gold); margin-right: 8px;"></i> Painel da Empresa</h3>
+                    <button id="close-modal" class="btn-icon" style="border: none;"><i
+                            class="fa-solid fa-xmark"></i></button>
+                </div>
+
+                <div class="grid-container grid-cols-2" style="gap: 2rem;">
+                    <!-- Coluna Esquerda: Dados e Bancos -->
+                    <div style="min-width: 0;">
+                        <h4
+                            style="margin-bottom: 1rem; color: var(--accent-gold); border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">
+                            Informações Cadastrais</h4>
+                        <form id="admin-company-form">
+                            <input type="hidden" id="admin-comp-mode" value="new">
+                            <div style="display: flex; gap: 1rem; margin-bottom: 0;">
+                                <div class="input-group" style="flex: 2;">
+                                    <label>Razão Social</label>
+                                    <input type="text" id="admin-comp-name" required placeholder="Ex: Acme Corp LTDA"
+                                        style="width: 100%;">
+                                </div>
+                                <div class="input-group" style="flex: 1;">
+                                    <label>ID (Login)</label>
+                                    <input type="text" id="admin-comp-id" required placeholder="Ex: 1234"
+                                        style="width: 100%;">
+                                </div>
+                            </div>
+                            
+                            <div style="display: flex; gap: 1rem; margin-bottom: 0;">
+                                <div class="input-group" style="flex: 1;">
+                                    <label>Senha de Acesso</label>
+                                    <div style="display: flex; gap: 0.5rem;">
+                                        <input type="password" id="admin-comp-password" placeholder="Definir nova senha" style="width: 100%;">
+                                        <button type="button" id="btn-toggle-pwd" class="btn-secondary" style="margin: 0; padding: 0.5rem; border-radius: 4px;" title="Ver Senha"><i class="fa-solid fa-eye"></i></button>
+                                    </div>
+                                </div>
+                                <div class="input-group" style="flex: 1; align-self: flex-end;">
+                                    <button type="button" id="btn-reset-pwd" class="btn-secondary" style="margin: 0; width: 100%;"><i class="fa-solid fa-envelope"></i> Enviar Redefinição</button>
+                                </div>
+                            </div>
+
+                            <div style="display: flex; gap: 1rem; margin-bottom: 0;">
+                                <div class="input-group" style="flex: 2;">
+                                    <label>Nível de Estruturação</label>
+                                    <select id="admin-comp-level" class="styled-select" required>
+                                        <option value="1">Nível 1 - Manual (Planilha Padrão CLARUS)</option>
+                                        <option value="2">Nível 2 - Semi-Auto (Upload Extratos/ERP)</option>
+                                        <option value="3">Nível 3 - Auto 4.0 (API via Open Finance/Make)</option>
+                                    </select>
+                                </div>
+                                <div class="input-group" style="flex: 1;">
+                                    <label>Capital Social (R$)</label>
+                                    <input type="number" id="admin-comp-capital" placeholder="Ex: 50000" step="0.01"
+                                        style="width: 100%;">
+                                </div>
+                            </div>
+
+                            <div class="input-group" style="margin-top: 1rem;">
+                                <label>Módulos / Pacotes</label>
+                                <div class="checkbox-grid" style="display: flex; flex-direction: column; gap: 0.5rem;">
+                                    <label class="checkbox-label" style="margin:0;"><input type="checkbox" checked
+                                            disabled> <span>Saúde
+                                            Financeira e Fluxo de Caixa (Base)</span></label>
+                                    <label class="checkbox-label" style="margin:0;"><input type="checkbox"
+                                            id="mod-rent">
+                                        <span>Rentabilidade e Curva ABC</span></label>
+                                    <label class="checkbox-label" style="margin:0;"><input type="checkbox" id="mod-com">
+                                        <span>Gestão
+                                            Comercial</span></label>
+                                    <label class="checkbox-label" style="margin:0;"><input type="checkbox"
+                                            id="mod-cres">
+                                        <span>Crescimento Empresarial</span></label>
+                                    <label class="checkbox-label" style="margin:0;"><input type="checkbox" id="mod-est">
+                                        <span>Controle de
+                                            Estoque</span></label>
+                                </div>
+                            </div>
+
+                            <div style="display: flex; gap: 10px; margin-top: 1.5rem;">
+                                <button type="submit" class="btn-primary" style="flex: 2; margin-top: 0;">Salvar
+                                    Definições</button>
+                                <button type="button" id="btn-audit-data" class="btn-secondary"
+                                    style="flex: 1; margin-top: 0; background: var(--bg-dark); border: 1px solid var(--border-color); color: white; border-radius: 8px; cursor: pointer;"
+                                    title="Auditar armazenamento local">
+                                    <i class="fa-solid fa-database"></i> Auditoria
+                                </button>
+                            </div>
+                            <button type="button" id="btn-wipe-all"
+                                style="margin-top: 1rem; width: 100%; background: transparent; border: 1px solid var(--status-danger); color: var(--status-danger); padding: 0.75rem; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.5rem; transition: background 0.3s;">
+                                <i class="fa-solid fa-skull-crossbones"></i> Resetar Todos os Uploads do Sistema
+                            </button>
+                        </form>
+
+                        <h4
+                            style="margin-top: 2rem; margin-bottom: 1rem; color: var(--accent-purple); border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">
+                            Contas Bancárias Mapeadas</h4>
+                        <div id="admin-bank-list"
+                            style="margin-bottom: 1rem; font-size: 0.85rem; color: var(--text-secondary);">
+                            <!-- Dinâmico -->
+                        </div>
+                        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;" id="bank-add-container">
+                            <select id="new-bank-select" class="styled-select" style="flex: 1; min-width: 150px;">
+                                <option value="">Selecione um Banco...</option>
+                                <option value="Itaú Unibanco">Itaú Unibanco</option>
+                                <option value="Bradesco">Bradesco</option>
+                                <option value="Banco do Brasil">Banco do Brasil</option>
+                                <option value="Caixa Econômica">Caixa Econômica</option>
+                                <option value="Santander">Santander</option>
+                                <option value="Nubank PJ">Nubank PJ</option>
+                                <option value="Banco Inter">Banco Inter</option>
+                                <option value="C6 Bank">C6 Bank</option>
+                                <option value="Sicredi">Sicredi</option>
+                                <option value="Sicoob">Sicoob</option>
+                                <option value="Stone">Stone</option>
+                                <option value="Mercado Pago">Mercado Pago</option>
+                                <option value="Outro">Outro (Digitar...)</option>
+                            </select>
+                            <input type="text" id="new-bank-custom" placeholder="Qual banco?"
+                                style="display: none; flex: 1; padding: 0.5rem; background: var(--bg-dark); border: 1px solid var(--border-color); color: white; border-radius: 4px;">
+                            <input type="number" id="new-bank-initial" placeholder="Saldo Inicial R$ (Opcional)"
+                                step="0.01"
+                                style="flex: 1; max-width: 180px; padding: 0.5rem; background: var(--bg-dark); border: 1px solid var(--border-color); color: white; border-radius: 4px;">
+                            <button class="btn-primary" id="btn-add-bank" style="padding: 0.5rem;" type="button"><i
+                                    class="fa-solid fa-plus"></i></button>
+                        </div>
+                        <p id="bank-lock-msg"
+                            style="display: none; color: var(--status-warning); font-size: 0.8rem; margin-top: 0.5rem;">
+                            Salve o cadastro do cliente primeiro para adicionar contas.</p>
+
+                        <h4
+                            style="margin-top: 2rem; margin-bottom: 1.1rem; color: #fbbf24; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">
+                            Cadastro de Empréstimos & Financiamentos</h4>
+                        <div id="admin-loans-list"
+                            style="margin-bottom: 1rem; font-size: 0.85rem; color: var(--text-secondary);">
+                            <!-- Dinâmico -->
+                        </div>
+                        <div
+                            style="background: rgba(0,0,0,0.2); border: 1px solid var(--border-color); border-radius: 8px; padding: 1rem;">
+                            <div class="grid-container grid-cols-2" style="gap: 0.8rem; margin-bottom: 0.8rem;">
+                                <div class="input-group" style="margin:0;">
+                                    <label style="font-size: 0.7rem;">Banco / Instituição</label>
+                                    <select id="loan-bank-select" class="styled-select"
+                                        style="font-size: 0.8rem;"></select>
+                                </div>
+                                <div class="input-group" style="margin:0;">
+                                    <label style="font-size: 0.7rem;">Nº Contrato</label>
+                                    <input type="text" id="loan-contract" placeholder="Ex: 456-789"
+                                        style="font-size: 0.8rem; background: var(--bg-dark); border: 1px solid var(--border-color); color: white; padding: 0.5rem; border-radius: 4px; width: 100%;">
+                                </div>
+                            </div>
+                            <div class="grid-container grid-cols-3" style="gap: 0.8rem; margin-bottom: 0.8rem;">
+                                <div class="input-group" style="margin:0;">
+                                    <label style="font-size: 0.7rem;">Valor Contraído (R$)</label>
+                                    <input type="number" id="loan-total-amount" placeholder="0.00"
+                                        style="font-size: 0.8rem; background: var(--bg-dark); border: 1px solid var(--border-color); color: white; padding: 0.5rem; border-radius: 4px; width: 100%;">
+                                </div>
+                                <div class="input-group" style="margin:0;">
+                                    <label style="font-size: 0.7rem;">Taxa Juros (% a.m.)</label>
+                                    <input type="number" id="loan-interest" placeholder="0.00" step="0.01"
+                                        style="font-size: 0.8rem; background: var(--bg-dark); border: 1px solid var(--border-color); color: white; padding: 0.5rem; border-radius: 4px; width: 100%;">
+                                </div>
+                                <div class="input-group" style="margin:0;">
+                                    <label style="font-size: 0.7rem;">Qtd Parcelas</label>
+                                    <input type="number" id="loan-installments-total" placeholder="Ex: 48"
+                                        style="font-size: 0.8rem; background: var(--bg-dark); border: 1px solid var(--border-color); color: white; padding: 0.5rem; border-radius: 4px; width: 100%;">
+                                </div>
+                            </div>
+                            <div class="grid-container grid-cols-3" style="gap: 0.8rem; margin-bottom: 0.8rem;">
+                                <div class="input-group" style="margin:0;">
+                                    <label style="font-size: 0.7rem;">Valor da Parcela (R$)</label>
+                                    <input type="number" id="loan-installment-value" placeholder="0.00"
+                                        style="font-size: 0.8rem; background: var(--bg-dark); border: 1px solid var(--border-color); color: white; padding: 0.5rem; border-radius: 4px; width: 100%;">
+                                </div>
+                                <div class="input-group" style="margin:0;">
+                                    <label style="font-size: 0.7rem;">Primeiro Vcto</label>
+                                    <input type="date" id="loan-first-due"
+                                        style="font-size: 0.8rem; background: var(--bg-dark); border: 1px solid var(--border-color); color: white; padding: 0.5rem; border-radius: 4px; width: 100%;">
+                                </div>
+                                <div class="input-group" style="margin:0;">
+                                    <label style="font-size: 0.7rem;">Último Vcto</label>
+                                    <input type="date" id="loan-last-due"
+                                        style="font-size: 0.8rem; background: var(--bg-dark); border: 1px solid var(--border-color); color: white; padding: 0.5rem; border-radius: 4px; width: 100%;">
+                                </div>
+                            </div>
+                            <button id="btn-add-loan" class="btn-primary"
+                                style="margin-top: 0.5rem; width: 100%; font-size: 0.8rem;"><i
+                                    class="fa-solid fa-file-invoice-dollar"></i> Adicionar Empréstimo</button>
+                        </div>
+                    </div>
+
+                    <!-- Coluna Direita: Data Lake e Uploads -->
+                    <div style="min-width: 0;">
+                        <h4
+                            style="margin-bottom: 1rem; color: var(--status-success); border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">
+                            Data Lake & Arquivos</h4>
+
+                        <div style="margin-bottom: 1rem; display: flex; gap: 10px;">
+                            <div style="flex: 1;">
+                                <label style="font-size: 0.8rem; color: var(--text-secondary);">Regime de
+                                    Lançamento:</label>
+                                <select id="upload-regime-ref" class="styled-select"
+                                    style="width: 100%; margin-top: 0.25rem;">
+                                    <option value="emissao">DRE (Por Emissão)</option>
+                                    <option value="vencimento">Fluxo de Caixa (Por Vencimento)</option>
+                                </select>
+                            </div>
+                            <div style="flex: 1;">
+                                <label style="font-size: 0.8rem; color: var(--text-secondary);">Mês Base:</label>
+                                <select id="upload-month-ref" class="styled-select"
+                                    style="width: 100%; margin-top: 0.25rem;">
+                                    <option value="">Carregando...</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div style="margin-bottom: 1rem;">
+                            <label style="font-size: 0.8rem; color: var(--text-secondary);">Banco Destino (Para
+                                OFX/Extratos Específicos):</label>
+                            <select id="upload-bank-ref" class="styled-select"
+                                style="width: 100%; margin-top: 0.25rem; font-family: inherit;">
+                                <option value="">Geral / Leitura Automática</option>
+                                <option value="" disabled>── Destino Específico DRE ──</option>
+                                <option value="receita">Receita (Faturamento)</option>
+                                <option value="imposto">Impostos (Governo/Guias)</option>
+                                <option value="custo">Custo Direto (CMV/CSV)</option>
+                                <option value="pagar">Despesas Pagar (Extrato)</option>
+                                <option value="despesa_operacional">Despesa Operacional (Excel)</option>
+                                <option value="salarios">Folha de Pagamento / Salários (Excel)</option>
+                                <option value="estoque">Relatório: Perda/Giro Estoque</option>
+                                <option value="" disabled>── Contas de Extrato ──</option>
+                            </select>
+                        </div>
+
+                        <div style="margin-bottom: 1.5rem; display: flex; align-items: center; gap: 8px; background: rgba(251, 191, 36, 0.1); padding: 8px; border-radius: 6px; border: 1px solid rgba(251, 191, 36, 0.2);">
+                            <input type="checkbox" id="upload-replace-mode" checked style="cursor:pointer; width:18px; height:18px; accent-color: var(--accent-gold);">
+                            <label for="upload-replace-mode" style="font-size: 0.8rem; color: var(--accent-gold); cursor:pointer; font-weight: 700;">Substituir dados existentes deste mês</label>
+                        </div>
+
+                        <div class="upload-zone" id="drop-zone" style="padding: 2rem 1rem; margin-bottom: 1rem;">
+                            <i class="fa-solid fa-file-arrow-up upload-icon"
+                                style="font-size: 2rem; margin-bottom: 0.5rem;"></i>
+                            <h4 style="font-size: 0.9rem;">Arraste relatórios aqui</h4>
+                            <p style="font-size: 0.75rem;">PDF, Excel (.xlsx, .xlsm), Word, CSV, XML, OFX</p>
+                            <input type="file" id="file-input" multiple
+                                accept=".pdf,.doc,.docx,.xls,.xlsx,.xlsm,.csv,.xml,.ofx,.txt" style="display: none;">
+                            <button class="btn-primary" id="btn-browse-files"
+                                style="display: inline-block; margin-top: 0.5rem; padding: 0.4rem 0.8rem; font-size: 0.75rem; width: auto;"
+                                onclick="document.getElementById('file-input').click()">Anexar Arquivos</button>
+                        </div>
+                        <p id="file-lock-msg"
+                            style="display: none; color: var(--status-warning); font-size: 0.8rem; margin-bottom: 1rem; text-align: center;">
+                            Salve o cadastro do cliente primeiro para enviar arquivos.</p>
+
+                        <div id="upload-status" class="hidden"
+                            style="background: rgba(30, 41, 59, 0.9); border: 1px solid var(--border-color); border-radius: 8px; padding: 1rem; margin-bottom: 1rem;">
+                            <div
+                                style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                                <span id="upload-status-text"
+                                    style="font-size: 0.8rem; color: var(--text-primary);">Enviando...</span>
+                                <span id="upload-progress-pct"
+                                    style="font-size: 0.8rem; color: var(--accent-gold); font-weight: 700;">0%</span>
+                            </div>
+                            <div
+                                style="width: 100%; height: 6px; background: #0f172a; border-radius: 3px; overflow: hidden;">
+                                <div id="upload-progress-bar"
+                                    style="width: 0%; height: 100%; background: var(--accent-gold); transition: width 0.3s ease;">
+                                </div>
+                            </div>
+                        </div>
+
+                        <ul id="admin-file-list" style="list-style: none; padding: 0;">
+                            <!-- Dinâmico -->
+                        </ul>
+
+                        <!-- UI de Comunicação com o Cliente -->
+                        <div style="margin-top: 2rem; border-top: 1px solid var(--border-color); padding-top: 1rem;">
+                            <h4
+                                style="margin-bottom: 1rem; color: var(--accent-blue); display: flex; align-items: center; gap: 8px;">
+                                <i class="fa-solid fa-comments"></i> Mensagens para o Cliente
+                            </h4>
+                            <div id="comm-history"
+                                style="max-height: 200px; overflow-y:auto; margin-bottom: 1rem; font-size: 0.8rem; border: 1px solid var(--border-color); border-radius: 8px; padding: 0.75rem; background: rgba(0,0,0,0.2);">
+                                <!-- Dinâmico -->
+                            </div>
+                            <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                                <textarea id="comm-message" placeholder="Escreva um comunicado ou aviso..."
+                                    style="width:100%; height: 80px; background:var(--bg-dark); color:white; border:1px solid var(--border-color); border-radius:8px; padding:0.75rem; font-family:inherit; resize:none; font-size: 0.85rem; outline: none;"></textarea>
+                                <button id="btn-send-message" class="btn-primary"
+                                    style="margin-top:0; padding: 0.6rem;"><i class="fa-solid fa-paper-plane"></i>
+                                    Enviar Notificação</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dashboard App -->
+    <div id="app-screen" class="screen hidden">
+
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo-container sidebar-logo">
+                    <img src="img/logo.png" alt="CLARUS EVOLUA" class="app-logo"
+                        onerror="this.outerHTML='<h2>CLARUS <span class=\'accent\'>EVOLUA</span></h2>'">
+                </div>
+            </div>
+            <nav class="sidebar-nav">
+                <div class="nav-section">Módulos</div>
+                <a href="#" class="nav-item active" data-target="saude-financeira">
+                    <i class="fa-solid fa-heart-pulse"></i> Saúde Financeira
+                </a>
+                <a href="#" class="nav-item" data-target="fluxo-caixa">
+                    <i class="fa-solid fa-money-bill-transfer"></i> Fluxo de Caixa
+                </a>
+                <a href="#" class="nav-item" data-target="bancos">
+                    <i class="fa-solid fa-building-columns"></i> Contas Bancárias
+                </a>
+                <a href="#" class="nav-item" data-target="emprestimos">
+                    <i class="fa-solid fa-file-invoice-dollar"></i> Empréstimos / Financ.
+                </a>
+                <a href="#" class="nav-item" data-target="comercial">
+                    <i class="fa-solid fa-cart-shopping"></i> Comercial
+                </a>
+                <a href="#" class="nav-item" data-target="estoque">
+                    <i class="fa-solid fa-boxes-stacked"></i> Estoque
+                </a>
+                <a href="#" class="nav-item" data-target="crescimento">
+                    <i class="fa-solid fa-arrow-trend-up"></i> Crescimento
+                </a>
+                <a href="#" class="nav-item" data-target="indicadores">
+                    <i class="fa-solid fa-gauge-high"></i>
+                    <span>Indicadores</span>
+                </a>
+                <a href="#" class="nav-item" data-target="balanco-gerencial">
+                    <i class="fa-solid fa-scale-balanced"></i>
+                    <span>Balanço Gerencial</span>
+                </a>
+                <div style="padding: 1rem; border-top: 1px dashed var(--border-color); margin-top: 5px;">
+                    <button onclick="window.toggleTheme()" class="theme-toggle-btn" title="Alternar Tema (Dia/Noite)">
+                        <i class="fa-solid fa-moon"></i>
+                    </button>
+                </div>
+            </nav>
+            <div class="sidebar-footer">
+                <div class="company-info">
+                    <div class="company-avatar"><i class="fa-solid fa-user-check"></i></div>
+                    <div class="company-details">
+                        <span class="company-name" id="display-company-name">Cliente Teste</span>
+                        <span class="company-status">Status: Saudável</span>
+                    </div>
+                </div>
+                <button id="logout-btn" class="btn-logout"><i class="fa-solid fa-right-from-bracket"></i> Sair</button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="topbar">
+                <div class="topbar-left">
+                    <h3 id="current-view-title">Balanço Gerencial</h3>
+                    <p class="subtitle" id="current-view-subtitle">Visão geral do negócio</p>
+                </div>
+                <!-- User Profile and Notifications -->
+                <div class="topbar-right">
+                    <div id="notification-trigger" class="notification-trigger">
+                        <i class="fa-solid fa-bell"></i>
+                        <span id="notification-badge" class="notification-badge hidden">0</span>
+                        <div id="notification-dropdown" class="notification-dropdown hidden">
+                            <div class="notif-header">
+                                <span style="font-weight:700;">Notificações</span>
+                                <button class="btn-icon" style="width:24px; height:24px; border:none;"
+                                    onclick="event.stopPropagation(); document.getElementById('notification-dropdown').classList.add('hidden')"><i
+                                        class="fa-solid fa-times"></i></button>
+                            </div>
+                            <div class="notif-list" id="notification-list">
+                                <p
+                                    style="padding: 1rem; color: var(--text-secondary); font-size: 0.8rem; text-align: center;">
+                                    Nenhuma notificação.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="divider"></div>
+                    <div class="user-profile">
+                        <i class="fa-regular fa-calendar"></i>
+                        <select id="period-select" class="styled-select" style="border: none; background: transparent;">
+                            <option value="2026-07">Mês Atual (Julho 2026)</option>
+                            <option value="2026-06">Mês Anterior (Junho 2026)</option>
+                            <option value="2026-05">Maio 2026</option>
+                            <option value="2026-04">Abril 2026</option>
+                            <option value="2026-03">Março 2026</option>
+                            <option value="2026-02">Fevereiro 2026</option>
+                            <option value="2026-01">Janeiro 2026</option>
+                        </select>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Dashboard Views Container -->
+            <div class="dashboard-views">
+                <!-- Saúde Financeira View -->
+                <div id="view-saude-financeira" class="dashboard-view view-active"></div>
+
+                <!-- Fluxo de Caixa View -->
+                <div id="view-fluxo-caixa" class="dashboard-view hidden"></div>
+
+                <!-- Bancos View -->
+                <div id="view-bancos" class="dashboard-view hidden"></div>
+
+                <!-- Empréstimos View -->
+                <div id="view-emprestimos" class="dashboard-view hidden"></div>
+
+                <!-- Rentabilidade View -->
+                <div id="view-rentabilidade" class="dashboard-view hidden"></div>
+
+                <!-- Comercial View -->
+                <div id="view-comercial" class="dashboard-view hidden"></div>
+
+                <!-- Estoque View -->
+                <div id="view-estoque" class="dashboard-view hidden"></div>
+
+                <!-- Crescimento View -->
+                <div id="view-crescimento" class="dashboard-view hidden"></div>
+
+                <!-- Balanço Gerencial View -->
+                <div id="view-balanco-gerencial" class="dashboard-view hidden"></div>
+            </div>
+
+            <!-- Floating AI Chat Widget -->
+            <button id="ai-chat-btn" class="ai-fab hidden">
+                <i class="fa-solid fa-wand-magic-sparkles"></i>
+            </button>
+            <div id="ai-chat-window" class="ai-chat-panel hidden">
+                <div class="ai-chat-header">
+                    <div>
+                        <h3 style="margin: 0; font-size: 1rem;"><i class="fa-solid fa-robot"
+                                style="color: var(--accent-gold); margin-right: 8px;"></i>LIA - IA Financeira</h3>
+                        <p style="margin: 0; font-size: 0.75rem; color: var(--text-secondary);">Analisando dados do
+                            Cliente</p>
+                    </div>
+                    <button id="ai-chat-close" class="btn-icon" style="color: white;"><i
+                            class="fa-solid fa-xmark"></i></button>
+                </div>
+                <div class="ai-chat-messages" id="ai-chat-messages">
+                    <div class="chat-message bot">Olá! Sou a LIA, sua assistente da CLARUS EVOLUA. Posso te ajudar a
+                        analisar seus números? Pergunte algo como "Qual foi o lucro do mês?" ou "Quais são as
+                        despesas?".</div>
+                </div>
+                <div class="ai-chat-input-area">
+                    <button class="ai-mic-btn" id="ai-mic-btn" title="Falar por voz"><i
+                            class="fa-solid fa-microphone"></i></button>
+                    <input type="text" id="ai-chat-input" placeholder="Pergunte sobre seus resultados...">
+                    <button class="ai-send-btn" id="ai-send-btn"><i class="fa-solid fa-paper-plane"></i></button>
+                </div>
+            </div>
+
+            <!-- View: Indicadores -->
+            <div id="view-indicadores" class="dashboard-view hidden">
+                <div class="grid-indicators-expert" id="indicators-grid">
+                    <!-- Card 1: Margem Líquida -->
+                    <div class="card indicator-card" id="card-margem-liquida">
+                        <div class="card-header">
+                            <span class="card-title">Margem Líquida (%)</span>
+                            <i class="fa-solid fa-percent accent"></i>
+                        </div>
+                        <div class="indicator-value" id="val-margem-liquida">--%</div>
+                        <div class="indicator-status" id="status-margem-liquida">Carregando...</div>
+                        <p class="indicator-desc">Eficiência econômica após todos os custos e despesas.</p>
+                    </div>
+
+                    <!-- Card 2: EBITDA -->
+                    <div class="card indicator-card" id="card-ebitda">
+                        <div class="card-header">
+                            <span class="card-title">EBITDA</span>
+                            <i class="fa-solid fa-chart-line accent"></i>
+                        </div>
+                        <div class="indicator-value" id="val-ebitda">R$ --</div>
+                        <div class="indicator-status text-success">Operacional Puro</div>
+                        <p class="indicator-desc">Geração de caixa operacional sem efeitos financeiros.</p>
+                    </div>
+
+                    <!-- Card 3: Geração de Caixa -->
+                    <div class="card indicator-card" id="card-geracao-caixa">
+                        <div class="card-header">
+                            <span class="card-title">Geração de Caixa</span>
+                            <i class="fa-solid fa-money-bill-trend-up accent"></i>
+                        </div>
+                        <div class="indicator-value" id="val-geracao-caixa">R$ --</div>
+                        <div class="indicator-status" id="status-geracao-caixa">Líquido Mensal</div>
+                        <p class="indicator-desc">Capacidade da empresa de gerar dinheiro real.</p>
+                    </div>
+
+                    <!-- Card 4: Ciclo Financeiro -->
+                    <div class="card indicator-card" id="card-ciclo-financeiro">
+                        <div class="card-header">
+                            <span class="card-title">Ciclo Financeiro</span>
+                            <i class="fa-solid fa-rotate accent"></i>
+                        </div>
+                        <div class="indicator-value" id="val-ciclo-financeiro">-- dias</div>
+                        <div class="indicator-status">Tempo de giro</div>
+                        <p class="indicator-desc">Tempo que o dinheiro fica "preso" na operação.</p>
+                    </div>
+
+                    <!-- Card 5: NCG -->
+                    <div class="card indicator-card" id="card-ncg">
+                        <div class="card-header">
+                            <span class="card-title">NCG</span>
+                            <i class="fa-solid fa-vault accent"></i>
+                        </div>
+                        <div class="indicator-value" id="val-ncg">R$ --</div>
+                        <div class="indicator-status">Capital de Giro</div>
+                        <p class="indicator-desc">Recurso necessário para manter as operações.</p>
+                    </div>
+
+                    <!-- Card 6: Endividamento -->
+                    <div class="card indicator-card" id="card-endividamento">
+                        <div class="card-header">
+                            <span class="card-title">Endividamento</span>
+                            <i class="fa-solid fa-hand-holding-dollar accent"></i>
+                        </div>
+                        <div class="indicator-value" id="val-endividamento">--%</div>
+                        <div class="indicator-status">Dependência de terceiros</div>
+                        <p class="indicator-desc">Grau de dependência de capital externo.</p>
+                    </div>
+
+                    <!-- Card 7: Ticket Médio -->
+                    <div class="card indicator-card" id="card-ticket-medio">
+                        <div class="card-header">
+                            <span class="card-title">Ticket Médio</span>
+                            <i class="fa-solid fa-tags accent"></i>
+                        </div>
+                        <div class="indicator-value" id="val-ticket-medio">R$ --</div>
+                        <div class="indicator-status">Venda Média</div>
+                        <p class="indicator-desc">Valor médio faturado por cada venda realizada.</p>
+                    </div>
+
+                    <!-- Card 8: CAC vs LTV -->
+                    <div class="card indicator-card" id="card-cac-ltv">
+                        <div class="card-header">
+                            <span class="card-title">CAC vs LTV</span>
+                            <i class="fa-solid fa-arrows-left-right accent"></i>
+                        </div>
+                        <div class="indicator-value" id="val-cac-ltv">--:--</div>
+                        <div class="indicator-status">Sustentabilidade</div>
+                        <p class="indicator-desc">Proporção ideal deve ser maior ou igual a 3x.</p>
+                    </div>
+
+                    <!-- Card 9: Receita por Funcionário -->
+                    <div class="card indicator-card" id="card-receita-funcionario">
+                        <div class="card-header">
+                            <span class="card-title">Receita p/ Funcionário</span>
+                            <i class="fa-solid fa-users-gear accent"></i>
+                        </div>
+                        <div class="indicator-value" id="val-receita-funcionario">R$ --</div>
+                        <div class="indicator-status">Produtividade</div>
+                        <p class="indicator-desc">Eficiência operacional média por colaborador.</p>
+                    </div>
+
+                    <!-- NOVO Card 10: Ponto de Equilíbrio -->
+                    <div class="card indicator-card" id="card-ponto-equilibrio">
+                        <div class="card-header">
+                            <span class="card-title" style="color: var(--accent-blue);">Ponto de Equilíbrio</span>
+                            <i class="fa-solid fa-scale-balanced-flip accent" style="color: var(--accent-blue);"></i>
+                        </div>
+                        <div class="indicator-value" id="val-ponto-equilibrio">R$ --</div>
+                        <div class="indicator-status">Faturamento Mínimo</div>
+                        <p class="indicator-desc">Quanto a empresa precisa faturar para não ter prejuízo.</p>
+                    </div>
+
+                    <!-- NOVO Card 11: Margem Bruta -->
+                    <div class="card indicator-card" id="card-margem-bruta">
+                        <div class="card-header">
+                            <span class="card-title" style="color: var(--status-success);">Margem Bruta (%)</span>
+                            <i class="fa-solid fa-box-open accent" style="color: var(--status-success);"></i>
+                        </div>
+                        <div class="indicator-value" id="val-margem-bruta">--%</div>
+                        <div class="indicator-status">Eficiência de Produção</div>
+                        <p class="indicator-desc">Sobra após deduzir impostos e custos diretos.</p>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal Configurações Globais -->
+    <div id="global-settings-modal" class="modal hidden">
+        <div class="modal-content card" style="max-width: 500px;">
+            <div class="modal-header"
+                style="display: flex; justify-content: space-between; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border-color); padding-bottom: 1rem;">
+                <h3><i class="fa-solid fa-gear accent" style="margin-right: 8px;"></i> Configurações do Sistema</h3>
+                <button id="close-global-modal" class="btn-icon"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+
+            <form id="global-settings-form">
+                <div class="input-group" style="margin-bottom: 1.25rem;">
+                    <label>Nome do Sistema (Brand)</label>
+                    <input type="text" id="global-system-name" placeholder="Ex: CLARUS EVOLUA" style="width: 100%;">
+                </div>
+
+                <div class="input-group" style="margin-bottom: 1.25rem;">
+                    <label>Logo (Caminho da Imagem)</label>
+                    <input type="text" id="global-logo-path" placeholder="Ex: img/logo.png" style="width: 100%;">
+                </div>
+
+                <div class="input-group" style="margin-bottom: 1.25rem;">
+                    <label>Gemini API Key (LIA Intelligence)</label>
+                    <input type="password" id="global-gemini-key" placeholder="Digite sua Chave API..."
+                        style="width: 100%;">
+                    <p style="font-size: 0.7rem; color: var(--text-secondary); margin-top: 4px;">Usado para análise
+                        profunda e relatório inteligente da LIA.</p>
+                </div>
+
+                <button type="submit" class="btn-primary" style="width: 100%; margin-top: 1rem;">Salvar Configurações
+                    Globais</button>
+            </form>
+        </div>
+    </div>
+
+    </div>
+
+    <!-- Modal Visualização de Notificação (Push) -->
+    <div id="notification-push-modal" class="modal hidden">
+        <div class="modal-content card" style="max-width: 450px;">
+            <div class="modal-header"
+                style="display: flex; justify-content: space-between; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border-color); padding-bottom: 1rem;">
+                <h3><i class="fa-solid fa-bell accent" style="margin-right: 8px;"></i> Comunicado</h3>
+                <button id="close-notif-modal" class="btn-icon"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div id="notif-push-content">
+                <!-- Content will be injected via JS -->
+            </div>
+            <button id="btn-notif-modal-ok" class="btn-primary"
+                style="width: 100%; margin-top: 1.5rem;">Entendido</button>
+        </div>
+    </div>
+
+    <!-- Modal Análise de Indicadores -->
+    <div id="modal-analise-indicador" class="modal hidden">
+        <div class="modal-content card" style="max-width: 550px;">
+            <div class="modal-header"
+                style="display: flex; justify-content: space-between; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border-color); padding-bottom: 1rem;">
+                <h3 id="analise-titulo"><i class="fa-solid fa-chart-pie accent" style="margin-right: 8px;"></i> Análise
+                    do Indicador</h3>
+                <button id="close-analise-modal" class="btn-icon"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div id="analise-content">
+                <div class="valor-atual-container"
+                    style="text-align: center; margin-bottom: 2rem; padding: 1.5rem; background: rgba(255,255,255,0.03); border-radius: 12px; border: 1px solid var(--border-color);">
+                    <span
+                        style="font-size: 0.8rem; color: var(--text-secondary); display: block; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 1px;">Valor
+                        Atual</span>
+                    <h2 id="analise-valor" style="font-size: 2.5rem; margin: 0; color: var(--accent-gold);">--</h2>
+                </div>
+
+                <div class="info-block" style="margin-bottom: 1.5rem;">
+                    <h4 style="color: var(--accent-blue); margin-bottom: 0.5rem;"><i class="fa-solid fa-book-open"
+                            style="margin-right: 6px;"></i> Conceito</h4>
+                    <p id="analise-conceito"
+                        style="font-size: 0.95rem; line-height: 1.6; color: var(--text-secondary);">
+                    </p>
+                </div>
+
+                <div class="info-block" style="margin-bottom: 1rem;">
+                    <h4 style="color: var(--status-success); margin-bottom: 0.5rem;"><i class="fa-solid fa-lightbulb"
+                            style="margin-right: 6px;"></i> Interpretação</h4>
+                    <p id="analise-interpretacao"
+                        style="font-size: 0.95rem; line-height: 1.6; color: var(--text-secondary);"></p>
+                </div>
+            </div>
+            <button id="btn-analise-modal-ok" class="btn-primary"
+                style="width: 100%; margin-top: 1.5rem;">Entendido</button>
+        </div>
+    </div>
+
+    <!-- Admin / LIA Ingestion Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <!-- pdf.js is already in <head> -->
+
+    <!-- Core App Scripts -->
+    <script src="js/data_nivel1.js?v=1.8.7"></script>
+    <script src="js/app.js?v=1.8.7"></script>
+    <script src="js/ai-chat.js?v=1.8.7"></script>
+    <script src="js/dashboards/saude-financeira.js?v=1.8.7"></script>
+    <script src="js/dashboards/fluxo-caixa.js?v=1.8.7"></script>
+    <script src="js/dashboards/bancos.js?v=1.8.7"></script>
+    <script src="js/dashboards/rentabilidade.js?v=1.8.7"></script>
+    <script src="js/dashboards/comercial.js?v=1.8.7"></script>
+    <script src="js/dashboards/estoque.js?v=1.8.7"></script>
+    <script src="js/dashboards/crescimento.js?v=1.8.7"></script>
+    <script src="js/dashboards/emprestimos.js?v=1.8.7"></script>
+    <script src="js/dashboards/balanco-gerencial.js?v=1.8.7"></script>
+    <script src="js/dashboards/indicadores.js?v=1.8.7"></script>
+    <script src="js/admin.js?v=1.8.7"></script>
+</body>
+
+</html>

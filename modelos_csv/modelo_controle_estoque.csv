@@ -1,0 +1,4 @@
+Codigo_Produto;Nome_Produto;Categoria;Local_Estoque;Quantidade_Atual;Quantidade_Minima_Alerta;Custo_Unitario;Preco_Venda_Unitario;Entradas_No_Mes_Qtd;Saidas_No_Mes_Qtd;Classificacao_ABC;Status_Ruptura
+PR001;Notebook Dell Vostro;Eletrônicos;Matriz;45;10;3200.00;4500.00;15;5;A;Estoque Saudavel
+PR002;Mouse Sem Fio;Acessórios;Matriz;12;20;45.00;120.00;0;35;C;Ruptura - Urgente
+PR003;Cadeira Ergonomica;Móveis;Filial SP;80;15;550.00;990.00;20;12;B;Estoque Saudavel

@@ -141,31 +141,32 @@ document.addEventListener('DOMContentLoaded', () => {
             doc.text("Parecer Técnico da Consultoria", 15, y);
             y += 12;
 
-            // ADVANCED FORMATTING
+            // ADVANCED FORMATTING & EMOJI STRIPPING
             let formattedText = analysisText
-                .replace(/<[^>]*>/g, '') // Remove HTML
-                .replace(/\[ACTION:.*?\]/g, '') // Remove Actions
+                .replace(/[^\x00-\x7F\u00C0-\u00FF]/g, '') // Strip emojis and keep BR chars
+                .replace(/<[^>]*>/g, '') 
+                .replace(/\[ACTION:.*?\]/g, '')
                 .replace(/BAIXAR RELATÓRIO PDF COMPLETO/g, '')
-                .replace(/Preparando Relatório PDF\.\.\./g, '')
-                .replace(/###\s*(.*?)\n/g, '\n\n$1\n') // Header spacing
-                .replace(/###/g, '\n\n') // Fallback headers
-                .replace(/\*\s/g, '\n  • ') // Bullets
-                .replace(/\*\*/g, '') // Bold marks
+                .replace(/###\s*(.*?)\n/g, '\n\n$1\n')
+                .replace(/###/g, '\n\n')
+                .replace(/\*\s/g, '\n  • ')
+                .replace(/\*\*/g, '')
                 .trim();
             
             doc.setFont("helvetica", "normal");
             doc.setFontSize(10);
             doc.setTextColor(...primaryColor);
-            doc.setLineHeightFactor(1.5); // Word-style 1.5 spacing
+            doc.setLineHeightFactor(1.5);
             
-            // Render text with JUSTIFY and MAX WIDTH
+            // Render text with LEFT alignment for better readability (avoids gaps)
             doc.text(formattedText, 15, y, { 
-                align: 'justify', 
+                align: 'left', 
                 maxWidth: 175 
             });
             
-            // Calculate height for vertical advance (10pt font * 1.5 factor * ~0.3527 mm/pt)
-            const approxHeight = doc.splitTextToSize(formattedText, 175).length * 5.5;
+            // Precise height calculation for 10pt font with 1.5 spacing
+            const lines = doc.splitTextToSize(formattedText, 175);
+            const approxHeight = lines.length * 5.3; // 5.3mm per line is safe for 1.5 factor
             
             // Left accent line
             doc.setDrawColor(accentColor[0], accentColor[1], accentColor[2]);

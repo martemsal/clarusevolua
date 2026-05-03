@@ -156,16 +156,23 @@ document.addEventListener('DOMContentLoaded', () => {
             doc.setFont("helvetica", "normal");
             doc.setFontSize(10);
             doc.setTextColor(...primaryColor);
+            doc.setLineHeightFactor(1.5); // Word-style 1.5 spacing
             
-            const lines = doc.splitTextToSize(formattedText, 175);
+            // Render text with JUSTIFY and MAX WIDTH
+            doc.text(formattedText, 15, y, { 
+                align: 'justify', 
+                maxWidth: 175 
+            });
+            
+            // Calculate height for vertical advance (10pt font * 1.5 factor * ~0.3527 mm/pt)
+            const approxHeight = doc.splitTextToSize(formattedText, 175).length * 5.5;
             
             // Left accent line
             doc.setDrawColor(accentColor[0], accentColor[1], accentColor[2]);
             doc.setLineWidth(0.5);
-            doc.line(12, y, 12, y + (lines.length * 5.2));
+            doc.line(12, y - 2, 12, y + approxHeight - 2);
 
-            doc.text(lines, 15, y);
-            y += (lines.length * 5.2) + 25;
+            y += approxHeight + 20;
         }
 
         // FORCE PAGE BREAK IF SPACE IS TIGHT
